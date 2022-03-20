@@ -1,7 +1,9 @@
 package face
 
+// Auth auth interface
+// mqtt.ConnectPacket
 type Auth interface {
 	Init()
-	Login(info *TransportInfo, clientId string, userName string, passWord string)
-	Check(info *TransportInfo, clientId string, userName string, passWord string)
+	Save(info *TransportInfo, ClientIdentifier string, userName string, passWord string)
+	Check(info *TransportInfo, ClientIdentifier string, userName string, passWord string)
 }
