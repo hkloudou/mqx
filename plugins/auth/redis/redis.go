@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"time"
 
@@ -40,17 +41,53 @@ func New(options ...Option) (face.Auth, error) {
 			DB:       1,
 		})
 	}
-
-	return &redisAuther{
+	obj := &redisAuther{
 		opts: &opts,
-	}, nil
+	}
+	if err := obj.GlobalConfig(); err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, ttl time.Duration) error {
 	if err := m.checkConfig(); err != nil {
 		return err
 	}
-	return m.opts.client.Set(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), req.PassWord, ttl).Err()
+	return m.opts.client.Set(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), m.encode([]byte(req.PassWord)), ttl).Err()
+}
+
+func (m *redisAuther) encode(datas []byte) string {
+	var _s = make([]byte, len(datas))
+	copy(_s, datas)
+	for i := 0; i < len(_s); i++ {
+		_s[i] = _s[i] ^ byte(i&0xFF)
+	}
+	return base64.RawURLEncoding.EncodeToString(_s)
+}
+
+// func (m *redisAuther) decode(datas []byte) []byte {
+// 	return m.encode(datas)
+// }
+
+func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, ttl time.Duration) (bool, error) {
+	if err := m.checkConfig(); err != nil {
+		return false, err
+	}
+	var r *redis.StringCmd
+	if ttl == 0 {
+		r = m.opts.client.Get(ctx, m.parseKeyFromReq(req, m.opts.authTmpl))
+	} else {
+		r = m.opts.client.GetEx(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), ttl)
+	}
+
+	if r.Err() != nil {
+		return false, r.Err()
+	}
+	if r.Val() != m.encode([]byte(req.PassWord)) {
+		return false, face.ErrAuthInvalidPassword
+	}
+	return true, nil
 }
 
 func (m *redisAuther) checkConfig() error {
