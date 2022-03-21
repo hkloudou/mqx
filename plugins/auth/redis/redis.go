@@ -2,22 +2,17 @@ package redis
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/hkloudou/mqx/face"
 )
 
-type token struct {
-	// SET	mqtt.$u.$c
-	Req *face.AuthReply
-}
-
 type redisAuther struct {
 	// gOpt   *face.AuthOptions
-	face.AuthOptionConfiger
+	// face.AuthOptionConfiger
 	opts *Options
 }
 
@@ -44,61 +39,136 @@ func New(options ...Option) (face.Auth, error) {
 	obj := &redisAuther{
 		opts: &opts,
 	}
-	if err := obj.GlobalConfig(); err != nil {
-		return nil, err
-	}
+	// if err := obj.GlobalConfig(); err != nil {
+	// 	return nil, err
+	// }
 	return obj, nil
 }
 
-func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, ttl time.Duration) error {
+func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) error {
+	var opts = face.DefaultAuthRequestOptions()
+	for _, opt := range options {
+		if opt != nil {
+			if err := opt(&opts); err != nil {
+				return err
+			}
+		}
+	}
 	if err := m.checkConfig(); err != nil {
 		return err
 	}
-	return m.opts.client.Set(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), m.encode([]byte(req.PassWord)), ttl).Err()
-}
-
-func (m *redisAuther) encode(datas []byte) string {
-	var _s = make([]byte, len(datas))
-	copy(_s, datas)
-	for i := 0; i < len(_s); i++ {
-		_s[i] = _s[i] ^ byte(i&0xFF)
+	key := m.parseKeyFromReq(req, m.opts.authTmpl)
+	model := &tokenModel{
+		CreateAt:      uint64(time.Now().UnixNano()),
+		TokenPassword: req.PassWord,
 	}
-	return base64.RawURLEncoding.EncodeToString(_s)
+	ttl := time.Duration(0)
+	if opts.UseTtl {
+		ttl = opts.Ttl
+	}
+	// set and check expired
+	if ttl >= 0 {
+		err := m.opts.client.Set(ctx, key, model, ttl).Err()
+		if err != nil {
+			return err
+		}
+		err = m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
+		if err != nil {
+			return err
+		}
+	}
+	return m.opts.client.Del(ctx, key).Err()
 }
 
-// func (m *redisAuther) decode(datas []byte) []byte {
-// 	return m.encode(datas)
-// }
-
-func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, ttl time.Duration) (bool, error) {
+func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) (bool, error) {
+	var opts = face.DefaultAuthRequestOptions()
+	for _, opt := range options {
+		if opt != nil {
+			if err := opt(&opts); err != nil {
+				return false, err
+			}
+		}
+	}
 	if err := m.checkConfig(); err != nil {
-		return false, err
+		return false, face.ErrAuthServiceUnviable
 	}
 	var r *redis.StringCmd
-	if ttl == 0 {
+	if !opts.UseTtl {
 		r = m.opts.client.Get(ctx, m.parseKeyFromReq(req, m.opts.authTmpl))
 	} else {
-		r = m.opts.client.GetEx(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), ttl)
+		r = m.opts.client.GetEx(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), opts.Ttl)
 	}
 
 	if r.Err() != nil {
-		return false, r.Err()
+		if r.Err().Error() == redis.Nil.Error() {
+			return false, face.ErrAuthInvalidUserNamePassword
+		}
+		return false, face.ErrAuthServiceUnviable
 	}
-	if r.Val() != m.encode([]byte(req.PassWord)) {
-		return false, face.ErrAuthInvalidPassword
+
+	var obj tokenModel
+	err := r.Scan(&obj)
+	if err != nil {
+		return false, err
+	}
+	if obj.TokenPassword != req.PassWord {
+		return false, face.ErrAuthServiceUnviable
+	}
+	err = m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
+	if err != nil {
+		return false, err
 	}
 	return true, nil
 }
 
 func (m *redisAuther) checkConfig() error {
-	if m.GOpt == nil {
-		return errors.New("MQX: auth.redis please call Config()")
-	}
 	if m.opts == nil {
 		return errors.New("MQX: auth.redis please init struct from New()")
 	}
 	if m.opts.client == nil {
 		return errors.New("MQX: auth.redis please init struct from New()")
+	}
+	return nil
+}
+
+func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens uint64, discartPlolicy face.AuthDiscardPolicy) error {
+	if maxTokens <= 0 {
+		return nil
+	}
+	if err := m.checkConfig(); err != nil {
+		return face.ErrAuthServiceUnviable
+	}
+	r := m.opts.client.Keys(context.TODO(), m.parseKeyFromReq(req, m.opts.listTmpl))
+	if r.Err() != nil {
+		return r.Err()
+	}
+	keys := r.Val()
+	if discartPlolicy == face.AuthDiscardNew {
+		if len(keys) >= int(maxTokens) {
+			return face.ErrAuthInvalidTooManyTokens
+		}
+		return nil
+	}
+	items := make(tokenModelByCreateAd, 0)
+	for i := 0; i < len(keys); i++ {
+		var item tokenModel
+		if v := m.opts.client.Get(context.TODO(), keys[i]); v.Err() != nil || v.Scan(&item) != nil {
+			return face.ErrAuthServiceUnviable
+		}
+		item.Key = keys[i]
+		items = append(items, item)
+	}
+	sort.Sort(sort.Reverse(items))
+	keeped := uint64(0)
+	discardedKeys := make([]string, 0)
+	for i := 0; i < len(items); i++ {
+		if keeped >= maxTokens {
+			discardedKeys = append(discardedKeys, items[i].Key)
+		}
+		keeped++
+	}
+	if len(discardedKeys) > 0 {
+		return m.opts.client.Del(context.TODO(), discardedKeys...).Err()
 	}
 	return nil
 }

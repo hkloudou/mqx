@@ -3,16 +3,16 @@ package face
 import (
 	"context"
 	"errors"
-	"time"
 )
 
 type ErrAuthInvalid error
 
 var (
-	ErrAuthInvalidUserName ErrAuthInvalid = errors.New("mqx: auth failed, invalid userName")
-	ErrAuthInvalidPassword ErrAuthInvalid = errors.New("mqx: auth failed, invalid password")
-	ErrAuthInvalidClientIP ErrAuthInvalid = errors.New("mqx: auth failed, invalid clientIP")
-	ErrAuthInvalidExpired  ErrAuthInvalid = errors.New("mqx: auth failed, token expired")
+	ErrAuthInvalidUserNamePassword ErrAuthInvalid = errors.New("mqx: auth failed, Invalid username or password")
+	ErrAuthServiceUnviable         ErrAuthInvalid = errors.New("mqx: auth faild, Service unavailable")
+	ErrAuthInvalidClientIP         ErrAuthInvalid = errors.New("mqx: auth failed, Invalid clientIP")
+	ErrAuthInvalidExpired          ErrAuthInvalid = errors.New("mqx: auth failed, Token expired")
+	ErrAuthInvalidTooManyTokens    ErrAuthInvalid = errors.New("mqx: auth failed, too many tokens")
 )
 
 type AuthRequest struct {
@@ -33,11 +33,12 @@ type AuthReply struct {
 // default public mqtt account is mqtt:public
 type Auth interface {
 	// Init() error
-	GlobalConfig(options ...authOption) error
-	// call the function in your application
-	Update(ctx context.Context, req *AuthRequest, ttl time.Duration) error
+	// GlobalConfig(options ...authOption) error
+
+	// call the function in your application,ttl -1: loginout
+	Update(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) error
 	// //
 	// Delete(req *AuthRequest) error
 	// // when the mqtt broker receive a mqtt.Connect packet
-	Check(ctx context.Context, req *AuthRequest, ttl time.Duration) (bool, error)
+	Check(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) (bool, error)
 }

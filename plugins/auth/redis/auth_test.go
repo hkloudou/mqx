@@ -17,13 +17,34 @@ func TestAuth(t *testing.T) {
 		ClientId: "1",
 		UserName: "mqtt",
 		PassWord: "public",
-	}, time.Minute*20)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+
+	err = obj.Update(context.TODO(), &face.AuthRequest{
+		ClientId: "2",
+		UserName: "mqtt",
+		PassWord: "public",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+	err = obj.Update(context.TODO(), &face.AuthRequest{
+		ClientId: "3",
+		UserName: "mqtt",
+		PassWord: "public",
+	}, face.WithAuthRequestDiscardPolicy(face.AuthDiscardNew))
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCheck(t *testing.T) {
+	// encoding.BinaryUnmarshaler
+	// t.Log("xx")
 	obj, err := New()
 	if err != nil {
 		t.Fatal(err)
@@ -32,9 +53,22 @@ func TestCheck(t *testing.T) {
 		ClientId: "1",
 		UserName: "mqtt",
 		PassWord: "public",
-	}, time.Minute*20)
+	}, face.WithAuthRequestTtl(-1))
+
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(authed)
+}
+
+func Test_Expired(t *testing.T) {
+	obj, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(obj.(*redisAuther).expiredBeforeConnection(&face.AuthRequest{
+		ClientId: "1",
+		UserName: "mqtt",
+		PassWord: "public",
+	}, 1, face.AuthDiscardOld))
 }
