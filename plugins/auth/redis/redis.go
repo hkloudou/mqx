@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -49,6 +50,22 @@ func New(options ...Option) (face.Auth, error) {
 }
 
 func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) error {
+	/*
+		http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.pdf
+		   The ClientId MUST be a UTF-8 encoded string as defined in Section 1.5.3 [MQTT-3.1.3-4].
+		   578
+		   579 The Server MUST allow ClientIds which are between 1 and 23 UTF-8 encoded bytes in length, and that
+		   580 contain only the characters
+		   581 "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" [
+	*/
+
+	if b, err := regexp.MatchString(`^[A-Za-z0-9-_]{1,36}$`, req.ClientId); !b || err != nil {
+		return face.ErrAuthInvalidClientId
+	}
+	if b, err := regexp.MatchString(`^[A-Za-z0-9-_@]{1,36}$`, req.UserName); !b || err != nil {
+		return face.ErrAuthInvalidUserNamePassword
+	}
+
 	var opts = face.DefaultAuthRequestOptions()
 	for _, opt := range options {
 		if opt != nil {

@@ -8,6 +8,7 @@ import (
 type ErrAuthInvalid error
 
 var (
+	ErrAuthInvalidClientId         ErrAuthInvalid = errors.New("mqx: auth failed, Invalid clientID")
 	ErrAuthInvalidUserNamePassword ErrAuthInvalid = errors.New("mqx: auth failed, Invalid username or password")
 	ErrAuthServiceUnviable         ErrAuthInvalid = errors.New("mqx: auth faild, Service unavailable")
 	ErrAuthInvalidClientIP         ErrAuthInvalid = errors.New("mqx: auth failed, Invalid clientIP")
