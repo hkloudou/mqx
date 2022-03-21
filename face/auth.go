@@ -33,11 +33,11 @@ type AuthReply struct {
 // default public mqtt account is mqtt:public
 type Auth interface {
 	// Init() error
-	Config(options ...authOption) error
+	GlobalConfig(options ...authOption) error
 	// call the function in your application
 	Update(ctx context.Context, req *AuthRequest, ttl time.Duration) error
 	// //
 	// Delete(req *AuthRequest) error
 	// // when the mqtt broker receive a mqtt.Connect packet
-	// Check(req *AuthRequest) (*AuthReply, error)
+	Check(ctx context.Context, req *AuthRequest, ttl time.Duration) (bool, error)
 }

@@ -14,7 +14,7 @@ type AuthOptionConfiger struct {
 	GOpt *authOptions
 }
 
-func (m *AuthOptionConfiger) Config(options ...authOption) error {
+func (m *AuthOptionConfiger) GlobalConfig(options ...authOption) error {
 	opts := defaultAuthOptions()
 	for _, opt := range options {
 		if opt != nil {
