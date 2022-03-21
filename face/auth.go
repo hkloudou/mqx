@@ -1,6 +1,7 @@
 package face
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -31,12 +32,12 @@ type AuthReply struct {
 // Auth interface
 // default public mqtt account is mqtt:public
 type Auth interface {
-	Init() error
-	Options()
+	// Init() error
+	Config(options ...authOption) error
 	// call the function in your application
-	Update(req *AuthRequest, ttl time.Duration) error
-	//
-	Delete(req *AuthRequest) error
-	// when the mqtt broker receive a mqtt.Connect packet
-	Check(req *AuthRequest) (*AuthReply, error)
+	Update(ctx context.Context, req *AuthRequest, ttl time.Duration) error
+	// //
+	// Delete(req *AuthRequest) error
+	// // when the mqtt broker receive a mqtt.Connect packet
+	// Check(req *AuthRequest) (*AuthReply, error)
 }
