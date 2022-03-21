@@ -24,7 +24,7 @@ type AuthRequestOption func(*authRequestOptions) error
 type authRequestOptions struct {
 	Ttl       time.Duration
 	UseTtl    bool
-	MaxTokens uint64 //no limit
+	MaxTokens uint64 //0:no limit
 	Discard   AuthDiscardPolicy
 }
 

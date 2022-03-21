@@ -24,21 +24,11 @@ type AuthRequest struct {
 	ClientIp       string `json:"clientIp"`       // real clientip
 }
 
-type AuthReply struct {
-	UserName  string `json:"userName"`
-	ExpiredAt int64  `json:"expiredAt"` // 0 if never expire
-}
-
 // Auth interface
 // default public mqtt account is mqtt:public
 type Auth interface {
-	// Init() error
-	// GlobalConfig(options ...authOption) error
-
 	// call the function in your application,ttl -1: loginout
 	Update(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) error
-	// //
-	// Delete(req *AuthRequest) error
-	// // when the mqtt broker receive a mqtt.Connect packet
 	Check(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) (bool, error)
+	MotionExpired(fc func(userName, clientId string) error) error
 }

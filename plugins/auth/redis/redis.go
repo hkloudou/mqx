@@ -3,7 +3,10 @@ package redis
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -18,6 +21,8 @@ type redisAuther struct {
 
 func New(options ...Option) (face.Auth, error) {
 	opts := Options{
+		addr:     "localhost:6379",
+		db:       1,
 		prefix:   "mqtt.auth",
 		authTmpl: "$p.$u.$c",
 		listTmpl: "$p.$u.*",
@@ -29,13 +34,11 @@ func New(options ...Option) (face.Auth, error) {
 			}
 		}
 	}
-	if opts.client == nil {
-		opts.client = redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: "", // no password set
-			DB:       1,
-		})
-	}
+	opts.client = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       1,
+	})
 	obj := &redisAuther{
 		opts: &opts,
 	}
@@ -57,6 +60,14 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 	if err := m.checkConfig(); err != nil {
 		return err
 	}
+	//check Expired Before Auth if discard policy is discard New
+	if opts.Discard == face.AuthDiscardNew {
+		err := m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
+		if err != nil {
+			return err
+		}
+	}
+
 	key := m.parseKeyFromReq(req, m.opts.authTmpl)
 	model := &tokenModel{
 		CreateAt:      uint64(time.Now().UnixNano()),
@@ -72,11 +83,16 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 		if err != nil {
 			return err
 		}
-		err = m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
-		if err != nil {
-			return err
+		// if discardold
+		if opts.Discard == face.AuthDiscardOld {
+			err = m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
 	}
+	// return nil
 	return m.opts.client.Del(ctx, key).Err()
 }
 
@@ -135,9 +151,6 @@ func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens u
 	if maxTokens <= 0 {
 		return nil
 	}
-	if err := m.checkConfig(); err != nil {
-		return face.ErrAuthServiceUnviable
-	}
 	r := m.opts.client.Keys(context.TODO(), m.parseKeyFromReq(req, m.opts.listTmpl))
 	if r.Err() != nil {
 		return r.Err()
@@ -171,4 +184,56 @@ func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens u
 		return m.opts.client.Del(context.TODO(), discardedKeys...).Err()
 	}
 	return nil
+}
+
+func (m *redisAuther) MotionExpired(fc func(userName, clientId string) error) error {
+	for {
+		err := m.motionExpired(fc)
+		if err != nil {
+			log.Println(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (reerr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			reerr = fmt.Errorf("%v", r)
+		}
+	}()
+	if err := m.opts.client.ConfigSet(context.TODO(), "notify-keyspace-events", "$Kxeg").Err(); err != nil {
+		return err
+	}
+	//"+m.opts.prefix+".*"
+	str := fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+".*", m.opts.client.Options().DB)
+
+	// log.Println("motion", str)
+	pubsub := m.opts.client.PSubscribe(context.TODO(),
+		str,
+	)
+	defer pubsub.Close()
+	for {
+		data, err := pubsub.ReceiveMessage(context.TODO())
+		if err != nil {
+			panic(err)
+		}
+		// log.Println("data.Pattern", data.Pattern, "data.Channel", data.Channel, "p", data.Payload)
+		if string(data.Payload) == "set" || string(data.Payload) == "del" || string(data.Payload) == "expired" || string(data.Payload) == "evict" {
+			go func() {
+				for i := 0; i < 10; i++ {
+					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+".", m.opts.client.Options().DB))
+					// println("remain", remain)
+					arr := strings.Split(remain, ".")
+					if len(arr) != 2 {
+						return
+					}
+					if fc(arr[0], arr[1]) == nil {
+						break
+					}
+					time.Sleep(1 * time.Second)
+				}
+			}()
+		}
+	}
 }

@@ -36,7 +36,7 @@ func TestAuth(t *testing.T) {
 		ClientId: "3",
 		UserName: "mqtt",
 		PassWord: "public",
-	}, face.WithAuthRequestDiscardPolicy(face.AuthDiscardNew))
+	}, face.WithAuthRequestDiscardPolicy(face.AuthDiscardOld), face.WithAuthRequestMaxTokens(1))
 	if err != nil {
 		t.Fatal(err)
 	}
