@@ -23,7 +23,7 @@ type redisAuther struct {
 func New(options ...Option) (face.Auth, error) {
 	opts := Options{
 		addr:     "localhost:6379",
-		db:       1,
+		db:       3,
 		prefix:   "mqtt.auth",
 		authTmpl: "$p.$u.$c",
 		listTmpl: "$p.$u.*",
@@ -36,9 +36,9 @@ func New(options ...Option) (face.Auth, error) {
 		}
 	}
 	opts.client = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     opts.addr,
 		Password: "", // no password set
-		DB:       1,
+		DB:       opts.db,
 	})
 	obj := &redisAuther{
 		opts: &opts,
