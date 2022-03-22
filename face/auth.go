@@ -3,6 +3,8 @@ package face
 import (
 	"context"
 	"errors"
+
+	packet "github.com/hkloudou/xtransport/packets/mqtt"
 )
 
 type ErrAuthInvalid error
@@ -30,6 +32,6 @@ type AuthRequest struct {
 type Auth interface {
 	// call the function in your application,ttl -1: loginout
 	Update(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) error
-	Check(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) (bool, error)
+	Check(ctx context.Context, req *AuthRequest, options ...AuthRequestOption) packet.ConnackReturnCode
 	MotionExpired(fc func(userName, clientId string) error) error
 }

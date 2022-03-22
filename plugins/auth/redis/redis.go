@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/hkloudou/mqx/face"
+	"github.com/hkloudou/xtransport/packets/mqtt"
 )
 
 type redisAuther struct {
@@ -25,8 +26,8 @@ func New(options ...Option) (face.Auth, error) {
 		addr:     "localhost:6379",
 		db:       3,
 		prefix:   "mqtt.auth",
-		authTmpl: "$p.$u.$c",
-		listTmpl: "$p.$u.*",
+		authTmpl: "$p:$u:$c",
+		listTmpl: "$p:$u:*",
 	}
 	for _, opt := range options {
 		if opt != nil {
@@ -113,17 +114,17 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 	return m.opts.client.Del(ctx, key).Err()
 }
 
-func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) (bool, error) {
+func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) mqtt.ConnackReturnCode {
 	var opts = face.DefaultAuthRequestOptions()
 	for _, opt := range options {
 		if opt != nil {
 			if err := opt(&opts); err != nil {
-				return false, err
+				return mqtt.ErrRefusedServerUnavailable
 			}
 		}
 	}
 	if err := m.checkConfig(); err != nil {
-		return false, face.ErrAuthServiceUnviable
+		return mqtt.ErrRefusedServerUnavailable
 	}
 	var r *redis.StringCmd
 	if !opts.UseTtl {
@@ -134,24 +135,24 @@ func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options 
 
 	if r.Err() != nil {
 		if r.Err().Error() == redis.Nil.Error() {
-			return false, face.ErrAuthInvalidUserNamePassword
+			return mqtt.ErrRefusedBadUsernameOrPassword
 		}
-		return false, face.ErrAuthServiceUnviable
+		return mqtt.ErrRefusedServerUnavailable
 	}
 
 	var obj tokenModel
 	err := r.Scan(&obj)
 	if err != nil {
-		return false, err
+		return mqtt.ErrRefusedServerUnavailable
 	}
 	if obj.TokenPassword != req.PassWord {
-		return false, face.ErrAuthServiceUnviable
+		return mqtt.ErrRefusedServerUnavailable
 	}
 	err = m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
 	if err != nil {
-		return false, err
+		return mqtt.ErrRefusedServerUnavailable
 	}
-	return true, nil
+	return mqtt.Accepted
 }
 
 func (m *redisAuther) checkConfig() error {
@@ -223,7 +224,7 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 		return err
 	}
 	//"+m.opts.prefix+".*"
-	str := fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+".*", m.opts.client.Options().DB)
+	str := fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+":*", m.opts.client.Options().DB)
 
 	// log.Println("motion", str)
 	pubsub := m.opts.client.PSubscribe(context.TODO(),
@@ -241,7 +242,7 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 				for i := 0; i < 10; i++ {
 					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+".", m.opts.client.Options().DB))
 					// println("remain", remain)
-					arr := strings.Split(remain, ".")
+					arr := strings.Split(remain, ":")
 					if len(arr) != 2 {
 						return
 					}

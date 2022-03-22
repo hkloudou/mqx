@@ -2,7 +2,7 @@ package face
 
 import "time"
 
-type AuthDiscardPolicy int
+type AuthDiscardPolicy uint8
 
 const (
 	// DiscardOld will remove older user expired

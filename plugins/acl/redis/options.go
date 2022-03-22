@@ -9,12 +9,12 @@ import (
 type Option func(*Options) error
 
 type Options struct {
-	prefix   string
-	addr     string
-	db       int
-	client   *redis.Client
-	authTmpl string
-	listTmpl string
+	prefix    string
+	addr      string
+	db        int
+	client    *redis.Client
+	blackTmpl string
+	whiteTmpl string
 }
 
 func WithRedisAddr(addr string) Option {
