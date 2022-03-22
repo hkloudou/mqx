@@ -146,7 +146,7 @@ func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options 
 		return mqtt.ErrRefusedServerUnavailable
 	}
 	if obj.TokenPassword != req.PassWord {
-		return mqtt.ErrRefusedServerUnavailable
+		return mqtt.ErrRefusedBadUsernameOrPassword
 	}
 	err = m.expiredBeforeConnection(req, opts.MaxTokens, opts.Discard)
 	if err != nil {

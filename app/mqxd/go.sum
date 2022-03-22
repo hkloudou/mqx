@@ -1,0 +1,8 @@
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/hkloudou/xlib v1.0.55 h1:VMolU2NCx4YW2HDE+6qAE0d1c3N3GjI7ihq8lFx/ydE=
+github.com/hkloudou/xlib v1.0.55/go.mod h1:bUvnC+aD1HVjCEyNn0UGozs96KTvvoJNWCFYyVQ0Bqg=
+github.com/hkloudou/xtransport v1.1.5 h1:t0lZU/8YK5ESABM9L5cWYLEFdgeZ54nWOWIsDI6JvS0=
+github.com/hkloudou/xtransport v1.1.5/go.mod h1:RAU6WtLWmQM3K1mlZQS8xlimeUxTjm8LcN+4Up+kYCs=
+github.com/hkloudou/xtransport/transports/tcp v1.0.2 h1:0YOYknbL76uyS6A8Na3nZzYGUhBg5urojf8D9NBp1lM=
+github.com/hkloudou/xtransport/transports/tcp v1.0.2/go.mod h1:/cfckh0y2GW6rWB7fZw68zoibmxuPvIXlJXTa7PZ+XE=

@@ -2,19 +2,19 @@ package face
 
 import (
 	"github.com/hkloudou/xtransport"
-	packet "github.com/hkloudou/xtransport/packets/mqtt"
+	"github.com/hkloudou/xtransport/packets/mqtt"
 )
 
 // Hook message io
 type Hook interface {
-	OnClientConnect(s xtransport.Socket[packet.ControlPacket], p *packet.ConnectPacket)
-	OnClientConnack(s xtransport.Socket[packet.ControlPacket], p *packet.ConnackPacket)
-	OnPublishConnect(s xtransport.Socket[packet.ControlPacket], p *packet.PublishPacket)
-	OnClientSubcribe(s xtransport.Socket[packet.ControlPacket], p *packet.SubscribePacket)
-	OnClientUnSubcribe(s xtransport.Socket[packet.ControlPacket], p *packet.UnsubscribePacket)
+	OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnectPacket)
+	OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnackPacket)
+	OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.PublishPacket)
+	OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket)
+	OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket)
 
-	// OnClientConnected(s xtransport.Socket[packet.ControlPacket], p *packet.ConnectPacket)
-	// OnClientDisConnected(s xtransport.Socket[packet.ControlPacket])
+	OnClientConnected(s xtransport.Socket[mqtt.ControlPacket])
+	OnClientDisConnected(s xtransport.Socket[mqtt.ControlPacket])
 	// OnClientConnect(evt *HookEvtClientConnect)
 	// OnClientPublish(evt *HookEvtClientPublish)
 	// OnClientSubcribe(evt *HookEvtClientSubcribe)

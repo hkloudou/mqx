@@ -10,7 +10,3 @@ flow:
 1、check allow
 2、diacard deny
 */
-
-func x() {
-
-}
