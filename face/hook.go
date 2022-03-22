@@ -8,12 +8,12 @@ import (
 // Hook message io
 type Hook interface {
 	OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnectPacket)
-	OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnackPacket)
+	OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket, ack *mqtt.ConnackPacket)
 	OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.PublishPacket)
 	OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket)
 	OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket)
 
-	OnClientConnected(s xtransport.Socket[mqtt.ControlPacket])
+	OnClientConnected(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket)
 	OnClientDisConnected(s xtransport.Socket[mqtt.ControlPacket])
 	// OnClientConnect(evt *HookEvtClientConnect)
 	// OnClientPublish(evt *HookEvtClientPublish)

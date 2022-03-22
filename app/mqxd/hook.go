@@ -36,7 +36,6 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p
 	// After a Network Connection is established by a Client to a Server, the first Packet sent from the Client to the Server MUST be a CONNECT Packet [MQTT-3.1.0-1].
 	// A Client can only send the CONNECT Packet once over a Network Connection. The Server MUST process a second CONNECT Packet sent from a Client as a protocol violation and disconnect the Client [MQTT-3.1.0-2].  See section 4.8 for information about handling errors.
 	// The payload contains one or more encoded fields. They specify a unique Client identifier for the Client, a Will topic, Will Message, User Name and Password. All but the Client identifier are optional and their presence is determined based on flags in the variable header.
-	// http://blog.mcxiaoke.com/mqtt/protocol/MQTT-3.1.1-CN.pdf
 	if s.Session().GetBool(_keyFirstConnPacket) {
 		s.Close()
 		return
@@ -56,50 +55,58 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p
 			k = _maxKeepAlive
 		}
 		s.SetTimeOut(k)
+	} else {
+		s.SetTimeOut(_maxKeepAlive)
 	}
 
 	// TODO: will message
 
-	//read serverName and subject commonName from connection
 	res := mqtt.NewControlPacket(mqtt.Connack).(*mqtt.ConnackPacket)
+	// only mqtt3.1.1 supported
+	if p.ProtocolName != "MQTT" || p.ProtocolVersion != 4 {
+		res.ReturnCode = mqtt.ErrProtocolViolation
+		m.OnClientConnack(s, p, res)
+		return
+	}
+	// deny all connection if no auth plugin provided
 	if m._auther == nil {
 		res.ReturnCode = mqtt.ErrRefusedServerUnavailable
-	} else {
-		req := &face.AuthRequest{
-			ClientId: p.ClientIdentifier,
-			UserName: p.Username,
-			PassWord: string(p.Password),
-			ClientIp: s.Remote(),
-		}
-		_readTls := func() {
-			state := s.ConnectionState()
-			if state != nil {
-				req.TlsServerName = state.ServerName
-				for _, cert := range state.PeerCertificates {
-					if cert.IsCA {
-						continue
-					}
-					for i := 0; i < len(cert.ExtKeyUsage); i++ {
-						if cert.ExtKeyUsage[i] == x509.ExtKeyUsageClientAuth || cert.ExtKeyUsage[i] == x509.ExtKeyUsageAny {
-							req.TlsSubjectName = cert.Subject.CommonName
-							return
-						}
+		m.OnClientConnack(s, p, res)
+		return
+	}
+	req := &face.AuthRequest{
+		ClientId: p.ClientIdentifier,
+		UserName: p.Username,
+		PassWord: string(p.Password),
+		ClientIp: s.Remote(),
+	}
+	// read serverName and subject commonName from connection
+	_readTls := func() {
+		state := s.ConnectionState()
+		if state != nil {
+			req.TlsServerName = state.ServerName
+			for _, cert := range state.PeerCertificates {
+				if cert.IsCA {
+					continue
+				}
+				for i := 0; i < len(cert.ExtKeyUsage); i++ {
+					if cert.ExtKeyUsage[i] == x509.ExtKeyUsageClientAuth || cert.ExtKeyUsage[i] == x509.ExtKeyUsageAny {
+						req.TlsSubjectName = cert.Subject.CommonName
+						return
 					}
 				}
 			}
 		}
-		_readTls()
-		res.ReturnCode = m._auther.Check(context.TODO(), req)
 	}
-
-	m.OnClientConnack(s, res)
-	return
+	_readTls()
+	res.ReturnCode = m._auther.Check(context.TODO(), req)
+	m.OnClientConnack(s, p, res)
 }
 
-func (m *defaultHook) OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnackPacket) {
-	s.Send(p)
-	if p.ReturnCode == mqtt.Accepted {
-		m.OnClientConnected(s)
+func (m *defaultHook) OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket, ack *mqtt.ConnackPacket) {
+	s.Send(ack)
+	if ack.ReturnCode == mqtt.Accepted {
+		m.OnClientConnected(s, req)
 	}
 }
 
@@ -108,6 +115,7 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		s.Close()
 		return
 	}
+	// TODO: ACL interface
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket) {
@@ -115,6 +123,7 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 		s.Close()
 		return
 	}
+	// TODO: ACL interface
 }
 
 func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket) {
@@ -122,20 +131,26 @@ func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket]
 		s.Close()
 		return
 	}
+	res := mqtt.NewControlPacket(mqtt.Unsuback).(*mqtt.UnsubackPacket)
+	res.MessageID = p.MessageID
+	s.Send(res)
 }
 
-func (m *defaultHook) OnClientConnected(s xtransport.Socket[mqtt.ControlPacket]) {
+func (m *defaultHook) OnClientConnected(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket) {
+	connid := uuid.New().String()
+	s.Session().Set("status.connid", connid)
+	s.Session().Set("auth.username", req.Username)
+	s.Session().Set("auth.clientid", req.ClientIdentifier)
+	m.conns.Store(connid, s)
+
 	s.Session().Set(_keyConnected, true)
-	connID := uuid.New().String()
-	s.Session().Set("connID", connID)
-	m.conns.Store(connID, s)
-	log.Println(connID, ">", "connected")
+	log.Println(connid, ">", "connected")
 }
 
 func (m *defaultHook) OnClientDisConnected(s xtransport.Socket[mqtt.ControlPacket]) {
 	s.Session().Set(_keyConnected, false)
 	se := s.Session()
-	connID := se.GetString("connID")
-	m.conns.Delete(connID)
-	log.Println(connID, ">", "disConnected")
+	connid := se.GetString("status.connid")
+	m.conns.Delete(connid)
+	log.Println(connid, ">", "disConnected")
 }
