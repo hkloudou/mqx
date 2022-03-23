@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	if err := conf.Init(""); err != nil {
+	if err := conf.Init("config"); err != nil {
 		panic(err)
 	}
 	log.Println("conf.App.Te", conf.App.BrandName)
