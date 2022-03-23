@@ -16,16 +16,18 @@ import (
 const _keyFirstConnPacket = "status.firstpacket"
 const _keyConnected = "status.connected"
 
-func newHook(aurher face.Auth) face.Hook {
+func newHook(aurher face.Auth, retainer face.Retain) face.Hook {
 	return &defaultHook{
-		_auther: aurher,
-		conns:   sync.Map{},
+		_auther:   aurher,
+		_retainer: retainer,
+		conns:     sync.Map{},
 	}
 }
 
 type defaultHook struct {
 	_subHooks []face.Hook
 	_auther   face.Auth
+	_retainer face.Retain
 	conns     sync.Map
 }
 
@@ -111,23 +113,36 @@ func (m *defaultHook) OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], r
 }
 
 func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.PublishPacket) {
-	if s.Session().GetBool(_keyConnected) {
+	if !s.Session().GetBool(_keyConnected) {
 		s.Close()
 		return
 	}
 	// TODO: ACL interface
+	// TODO: retainer store
+	if m._retainer == nil {
+		log.Println("no retainer define")
+		return
+	}
+	if p.Retain {
+		if err := m._retainer.Store(context.TODO(), p); err != nil {
+			log.Println(err)
+			return
+		}
+	}
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket) {
-	if s.Session().GetBool(_keyConnected) {
+	if !s.Session().GetBool(_keyConnected) {
 		s.Close()
 		return
 	}
 	// TODO: ACL interface
+	// TODO: retainer read
+
 }
 
 func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket) {
-	if s.Session().GetBool(_keyConnected) {
+	if !s.Session().GetBool(_keyConnected) {
 		s.Close()
 		return
 	}

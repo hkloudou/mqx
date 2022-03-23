@@ -6,6 +6,7 @@ import (
 
 	"github.com/hkloudou/mqx/face"
 	auth "github.com/hkloudou/mqx/plugins/auth/redis"
+	retain "github.com/hkloudou/mqx/plugins/retain/redis"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xlib/xruntime"
 	"github.com/hkloudou/xtransport"
@@ -18,6 +19,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	_retain, err := retain.New()
+	if err != nil {
+		panic(err)
+	}
 	err = _auther.Update(context.TODO(), &face.AuthRequest{
 		ClientId: "mqttx_82d0e066",
 		UserName: "mqtt",
@@ -26,7 +31,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_hook := newHook(_auther)
+	_hook := newHook(_auther, _retain)
 	tran := transport.NewTransport[mqtt.ControlPacket]("tcp", xtransport.Secure(false))
 	l, err := tran.
 		Listen(":1883")

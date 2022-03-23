@@ -4,5 +4,6 @@ use (
 	./app/mqxd
 	./face
 	./plugins/auth/redis
+	./plugins/retain/redis
 	./plugins/acl/redis
 )
