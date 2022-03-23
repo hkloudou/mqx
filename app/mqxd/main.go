@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/hkloudou/mqx/app/mqxd/internal/conf"
 	auth "github.com/hkloudou/mqx/plugins/auth/redis"
 	retain "github.com/hkloudou/mqx/plugins/retain/redis"
 	"github.com/hkloudou/xlib/xcolor"
@@ -13,6 +15,10 @@ import (
 )
 
 func main() {
+	if err := conf.Init(""); err != nil {
+		panic(err)
+	}
+	log.Println("conf.App.Te", conf.App.BrandName)
 	_auther, err := auth.New()
 	if err != nil {
 		panic(err)
