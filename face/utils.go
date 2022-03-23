@@ -2,7 +2,6 @@ package face
 
 import (
 	"errors"
-	"regexp"
 	"strings"
 )
 
@@ -33,62 +32,67 @@ func ValidatePattern(pattern string) error {
 	}
 	levels := strings.Split(pattern, "/")
 	for i, level := range levels {
-		if level == "" {
-			return ErrInvalidTopicFormat
-		}
-		if i == 0 && len(levels) > 1 {
-			if level == "$SYS" || level == "$USR" || level == "$CID" {
-				continue
-			}
-		}
-		if level == "+" {
-			continue
-		}
-		if level == "#" {
-			if i != len(levels)-1 {
-				return ErrInvalidTopicFormat
-			}
-			continue
-		}
-		match, err := regexp.MatchString(_topicLevelExp, level)
-		if err != nil {
-			return err
-		} else if !match {
+		if level == "#" && i != len(levels)-1 {
 			return ErrInvalidTopicFormat
 		}
 	}
 	return nil
+	// Skip char check
+	// levels := strings.Split(pattern, "/")
+	// for i, level := range levels {
+	// 	if level == "" {
+	// 		return ErrInvalidTopicFormat
+	// 	}
+	// 	if i == 0 && len(levels) > 1 {
+	// 		if level == "$SYS" || level == "$USR" || level == "$CID" {
+	// 			continue
+	// 		}
+	// 	}
+	// 	if level == "+" {
+	// 		continue
+	// 	}
+	// 	if level == "#" {
+	// 		if i != len(levels)-1 {
+	// 			return ErrInvalidTopicFormat
+	// 		}
+	// 		continue
+	// 	}
+	// 	match, err := regexp.MatchString(_topicLevelExp, level)
+	// 	if err != nil {
+	// 		return err
+	// 	} else if !match {
+	// 		return ErrInvalidTopicFormat
+	// 	}
+	// }
+	// return nil
 }
 
 func ValidateTopic(topic string) error {
-	if len(topic) == 0 {
-		return ErrInvalidTopicFormat
-	}
 	if strings.Contains(topic, "#") || strings.Contains(topic, "+") {
 		return ErrInvalidPatterunTopic
 	}
-
-	if strings.HasPrefix(topic, "/") || strings.HasSuffix(topic, "/") {
-		return ErrInvalidTopicFormat
-	}
-	levels := strings.Split(topic, "/")
-	for i, level := range levels {
-		if level == "" {
-			return ErrInvalidTopicFormat
-		}
-		if i == 0 && len(levels) > 1 {
-			if level == "$SYS" || level == "$USR" || level == "$CID" {
-				continue
-			}
-		}
-		match, err := regexp.MatchString(_topicLevelExp, level)
-		if err != nil {
-			return err
-		} else if !match {
-			return ErrInvalidTopicFormat
-		}
-	}
-	return nil
+	return ValidatePattern(topic)
+	// if strings.HasPrefix(topic, "/") || strings.HasSuffix(topic, "/") {
+	// 	return ErrInvalidTopicFormat
+	// }
+	// levels := strings.Split(topic, "/")
+	// for i, level := range levels {
+	// 	if level == "" {
+	// 		return ErrInvalidTopicFormat
+	// 	}
+	// 	if i == 0 && len(levels) > 1 {
+	// 		if level == "$SYS" || level == "$USR" || level == "$CID" {
+	// 			continue
+	// 		}
+	// 	}
+	// 	match, err := regexp.MatchString(_topicLevelExp, level)
+	// 	if err != nil {
+	// 		return err
+	// 	} else if !match {
+	// 		return ErrInvalidTopicFormat
+	// 	}
+	// }
+	// return nil
 }
 
 func MatchTopic(pattern, topic string) error {
