@@ -25,7 +25,7 @@ func New(options ...Option) (face.Auth, error) {
 	opts := Options{
 		addr:     "localhost:6379",
 		db:       3,
-		prefix:   "mqtt.auth",
+		prefix:   "mqx.auth",
 		authTmpl: "$p/$u/$c",
 		listTmpl: "$p/$u/*",
 	}

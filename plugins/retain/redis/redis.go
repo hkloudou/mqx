@@ -3,17 +3,26 @@ package redis
 import (
 	"bytes"
 	"context"
-	"errors"
 	"strings"
+	"unsafe"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xtransport/packets/mqtt"
 )
 
+//https://github.com/go-redis/redis/blob/master/internal/util/unsafe.go
+// stringToBytes converts string to byte slice.
+func stringToBytes(s string) []byte {
+	return *(*[]byte)(unsafe.Pointer(
+		&struct {
+			string
+			Cap int
+		}{s, len(s)},
+	))
+}
+
 type redisRetainer struct {
-	// gOpt   *face.AuthOptions
-	// face.AuthOptionConfiger
 	opts *Options
 }
 
@@ -21,7 +30,7 @@ func New(options ...Option) (face.Retain, error) {
 	opts := Options{
 		addr:   "localhost:6379",
 		db:     3,
-		prefix: "mqtt.retain",
+		prefix: "mqx.retain",
 	}
 	for _, opt := range options {
 		if opt != nil {
@@ -41,7 +50,10 @@ func New(options ...Option) (face.Retain, error) {
 	return obj, nil
 }
 
-func (m *redisRetainer) Watch(func(data *mqtt.PublishPacket)) {}
+func (m *redisRetainer) Watch(func(data *mqtt.PublishPacket)) {
+
+}
+
 func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) error {
 	if err := face.ValidateTopic(data.TopicName); err != nil {
 		return err
@@ -57,11 +69,11 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 	for i := 0; i < len(_s); i++ {
 		_s[i] = _s[i] ^ byte(i&0xFF)
 	}
-
 	return m.opts.client.Set(ctx, m.toRedisKey(data.TopicName), _s, 0).Err()
 }
 
-func (m *redisRetainer) Check(ctx context.Context, pattern string) (*mqtt.PublishPacket, error) {
+func (m *redisRetainer) Check(ctx context.Context, pattern string) ([]*mqtt.PublishPacket, error) {
+	msgs := make([]*mqtt.PublishPacket, 0)
 	if err := face.ValidatePattern(pattern); err != nil {
 		return nil, err
 	}
@@ -74,32 +86,32 @@ func (m *redisRetainer) Check(ctx context.Context, pattern string) (*mqtt.Publis
 	matched2 := make([]string, 0)
 	for i := 0; i < len(matched); i++ {
 		if face.MatchTopic(pattern, m.toTopic(matched[i])) == nil {
-			matched2 = append(matched2, m.toTopic(matched[i]))
+			matched2 = append(matched2, matched[i])
 		}
 	}
 	if len(matched2) == 0 {
-		return nil, nil
+		return msgs, nil
 	}
-	r2 := m.opts.client.Get(ctx, m.opts.prefix+"/"+matched2[0])
+
+	r2 := m.opts.client.MGet(ctx, matched2...)
+	// r2 := m.opts.client.Get(ctx, m.opts.prefix+"/"+matched2[0])
 	if r2.Err() != nil {
 		return nil, r2.Err()
 	}
-	_s, err := r2.Bytes()
-	if err != nil {
-		return nil, err
+	for _, v := range r2.Val() {
+		_s := stringToBytes(v.(string))
+		for i := 0; i < len(_s); i++ {
+			_s[i] = _s[i] ^ byte(i&0xFF)
+		}
+		obj, err := mqtt.ReadPacket(bytes.NewBuffer(_s))
+		if err != nil {
+			return nil, err
+		}
+		if obj, ok := obj.(*mqtt.PublishPacket); ok {
+			msgs = append(msgs, obj)
+		}
 	}
-	for i := 0; i < len(_s); i++ {
-		_s[i] = _s[i] ^ byte(i&0xFF)
-	}
-	obj, err := mqtt.ReadPacket(bytes.NewBuffer(_s))
-	if err != nil {
-		return nil, err
-	}
-	if obj2, ok := obj.(*mqtt.PublishPacket); !ok {
-		return nil, errors.New("not found")
-	} else {
-		return obj2, nil
-	}
+	return msgs, nil
 }
 
 func (m *redisRetainer) Keys(ctx context.Context) ([]string, error) {
@@ -107,7 +119,11 @@ func (m *redisRetainer) Keys(ctx context.Context) ([]string, error) {
 	if r.Err() != nil {
 		return nil, r.Err()
 	}
-	return r.Val(), nil
+	keys := make([]string, 0)
+	for _, v := range r.Val() {
+		keys = append(keys, m.toTopic(v))
+	}
+	return keys, nil
 }
 
 func (m *redisRetainer) toRedisKey(topic string) string {

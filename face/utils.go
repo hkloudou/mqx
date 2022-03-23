@@ -102,16 +102,16 @@ func MatchTopic(pattern, topic string) error {
 	if err := ValidateTopic(topic); err != nil {
 		return err
 	}
-	patternArr := strings.Split(pattern, "/")
-	topicArr := strings.Split(topic, "/")
-	for i := 0; i < len(patternArr); i++ {
-		if patternArr[i] == "+" {
+	patterns := strings.Split(pattern, "/")
+	topics := strings.Split(topic, "/")
+	for i := 0; i < len(patterns); i++ {
+		if patterns[i] == "+" {
 			continue
 		}
-		if patternArr[i] == "#" {
+		if patterns[i] == "#" {
 			return nil
 		}
-		if patternArr[i] != topicArr[i] {
+		if patterns[i] != topics[i] {
 			return errors.New("not match")
 		}
 	}

@@ -117,11 +117,20 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		s.Close()
 		return
 	}
+	log.Println("OnClientPublish", p.String())
 	// TODO: ACL interface
 	// TODO: retainer store
 	if m._retainer == nil {
 		log.Println("no retainer define")
 		return
+	}
+
+	// TODO: qos:2
+	if p.Qos == 1 {
+		res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
+		res.MessageID = p.MessageID
+		res.Qos = p.Qos
+		s.Send(res)
 	}
 	if p.Retain {
 		if err := m._retainer.Store(context.TODO(), p); err != nil {
@@ -139,10 +148,8 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 	res := mqtt.NewControlPacket(mqtt.Suback).(*mqtt.SubackPacket)
 	res.MessageID = p.MessageID
 
-	// println("p", p.String())
-	// if p.Retain {
-
-	//verify
+	log.Println("OnClientSubcribe", p.String())
+	// verify
 	if len(p.Qoss) != len(p.Topics) || len(p.Qoss) == 0 {
 		ma := len(p.Qoss)
 		if len(p.Topics) > len(p.Qoss) {
@@ -159,24 +166,28 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 
 	// TODO: ACL interface
 	// TODO: retainer read
+	retaineds := make([]*mqtt.PublishPacket, 0)
 	for i := 0; i < len(p.Topics); i++ {
 		if m._retainer == nil {
 			log.Println("no retainer define")
 			res.ReturnCodes[i] = 0x80
 			continue
 		}
-		obj, err := m._retainer.Check(context.TODO(), p.Topics[i])
+		objs, err := m._retainer.Check(context.TODO(), p.Topics[i])
 		if err != nil {
 			println("err", err.Error())
 			res.ReturnCodes[i] = 0x80
 			continue
 		}
 		res.ReturnCodes[i] = 0x00
-		if obj != nil {
-			println("obj", obj.String())
+		if objs != nil && len(objs) > 0 {
+			retaineds = append(retaineds, objs...)
 		}
 	}
 	s.Send(res)
+	for i := 0; i < len(retaineds); i++ {
+		s.Send(retaineds[i])
+	}
 }
 
 func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket) {
