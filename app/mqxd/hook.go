@@ -117,13 +117,9 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		s.Close()
 		return
 	}
-	log.Println("OnClientPublish", p.String())
+	// log.Println("OnClientPublish", p.String())
 	// TODO: ACL interface
 	// TODO: retainer store
-	if m._retainer == nil {
-		log.Println("no retainer define")
-		return
-	}
 
 	// TODO: qos:2
 	if p.Qos == 1 {
@@ -133,11 +129,15 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		s.Send(res)
 	}
 	if p.Retain {
+		if m._retainer == nil {
+			return
+		}
 		if err := m._retainer.Store(context.TODO(), p); err != nil {
 			log.Println(err)
 			return
 		}
 	}
+	// TODO: publish data to client and other node
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket) {
