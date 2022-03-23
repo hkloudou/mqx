@@ -138,7 +138,21 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 	}
 	// TODO: ACL interface
 	// TODO: retainer read
-
+	println("p", p.String())
+	// if p.Retain {
+	if m._retainer == nil {
+		log.Println("no retainer define")
+		return
+	}
+	for i := 0; i < len(p.Topics); i++ {
+		obj, err := m._retainer.Check(context.TODO(), p.Topics[i])
+		if err != nil {
+			println("err", err.Error())
+			continue
+		}
+		println("obj", obj)
+	}
+	// }
 }
 
 func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket) {

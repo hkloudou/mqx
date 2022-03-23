@@ -55,21 +55,24 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 		_s[i] = _s[i] ^ byte(i&0xFF)
 	}
 
-	return m.opts.client.Set(ctx, m.opts.prefix+":"+data.TopicName, _s, 0).Err()
+	return m.opts.client.Set(ctx, m.opts.prefix+"/"+data.TopicName, _s, 0).Err()
 }
 
 func (m *redisRetainer) Check(ctx context.Context, pattern string) (*mqtt.PublishPacket, error) {
-	if err := face.ValidateTopicPattern(pattern); err != nil {
-		return nil, err
-	}
+
 	regStr := pattern
 	regStr = strings.ReplaceAll(regStr, "#", "*")
 	regStr = strings.ReplaceAll(regStr, "+", "*")
-	r := m.opts.client.Keys(ctx, m.opts.prefix+":"+regStr)
+	print("regStr", regStr)
+	if err := face.ValidateTopicPattern(pattern); err != nil {
+		return nil, err
+	}
+	r := m.opts.client.Keys(ctx, m.opts.prefix+"/"+regStr)
 	if r.Err() != nil {
 		return nil, r.Err()
 	}
 	matched := r.Val()
+	print("matched", matched)
 	if len(matched) == 0 {
 		return nil, nil
 	}

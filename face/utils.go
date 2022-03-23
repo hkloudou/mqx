@@ -16,14 +16,13 @@ import (
 var ErrInvalidPatterunTopic = errors.New("invalid Topic; publish topic should not be pattern")
 var ErrInvalidTopicFormat = errors.New("Invalid topic;")
 
-const _topicSplit = ":"
-const _topicLevelExp = "^[0-9a-zA-Z_./]+$"
+const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
 
 func ValidateTopicPattern(pattern string) error {
 	if len(pattern) == 0 {
 		return ErrInvalidTopicFormat
 	}
-	levels := strings.Split(pattern, _topicSplit)
+	levels := strings.Split(pattern, "/")
 	for i, level := range levels {
 		if level == "" {
 			return ErrInvalidTopicFormat
@@ -60,10 +59,10 @@ func ValidatePublishTopic(topic string) error {
 		return ErrInvalidPatterunTopic
 	}
 
-	if strings.HasPrefix(topic, _topicSplit) || strings.HasSuffix(topic, _topicSplit) {
+	if strings.HasPrefix(topic, "/") || strings.HasSuffix(topic, "/") {
 		return ErrInvalidTopicFormat
 	}
-	levels := strings.Split(topic, _topicSplit)
+	levels := strings.Split(topic, "/")
 	for i, level := range levels {
 		if level == "" {
 			return ErrInvalidTopicFormat

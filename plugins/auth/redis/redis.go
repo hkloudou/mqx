@@ -242,7 +242,7 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 				for i := 0; i < 10; i++ {
 					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+".", m.opts.client.Options().DB))
 					// println("remain", remain)
-					arr := strings.Split(remain, ":")
+					arr := strings.Split(remain, "/")
 					if len(arr) != 2 {
 						return
 					}

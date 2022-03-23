@@ -32,7 +32,7 @@ func WithRedisDB(db int) Option {
 
 func WithPrefix(prefix string) Option {
 	return func(o *Options) error {
-		trims := []string{" ", ":", "."}
+		trims := []string{" ", "/", ":", "."}
 		o.prefix = prefix
 		for i := 0; i < len(trims); i++ {
 			o.prefix = strings.Trim(o.prefix, trims[i])
