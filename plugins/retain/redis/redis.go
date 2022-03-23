@@ -50,10 +50,6 @@ func New(options ...Option) (face.Retain, error) {
 	return obj, nil
 }
 
-func (m *redisRetainer) Watch(func(data *mqtt.PublishPacket)) {
-
-}
-
 func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) error {
 	if err := face.ValidateTopic(data.TopicName); err != nil {
 		return err
