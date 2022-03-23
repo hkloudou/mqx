@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/hkloudou/mqx/face"
 	auth "github.com/hkloudou/mqx/plugins/auth/redis"
 	retain "github.com/hkloudou/mqx/plugins/retain/redis"
 	"github.com/hkloudou/xlib/xcolor"
@@ -20,14 +18,6 @@ func main() {
 		panic(err)
 	}
 	_retain, err := retain.New()
-	if err != nil {
-		panic(err)
-	}
-	err = _auther.Update(context.TODO(), &face.AuthRequest{
-		ClientId: "mqttx_82d0e066",
-		UserName: "mqtt",
-		PassWord: "publish",
-	})
 	if err != nil {
 		panic(err)
 	}

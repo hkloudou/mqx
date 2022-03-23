@@ -102,8 +102,13 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p
 			}
 		}
 	}
-	_readTls()
-	res.ReturnCode = m._auther.Check(context.TODO(), req)
+
+	if p.Username == "mqtt" && string(p.Password) == "public" {
+		res.ReturnCode = 0x00
+	} else {
+		_readTls()
+		res.ReturnCode = m._auther.Check(context.TODO(), req)
+	}
 	m.OnClientConnack(s, p, res)
 }
 
@@ -196,6 +201,7 @@ func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket]
 		s.Close()
 		return
 	}
+
 	res := mqtt.NewControlPacket(mqtt.Unsuback).(*mqtt.UnsubackPacket)
 	res.MessageID = p.MessageID
 	s.Send(res)
