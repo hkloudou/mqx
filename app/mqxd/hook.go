@@ -136,23 +136,47 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 		s.Close()
 		return
 	}
-	// TODO: ACL interface
-	// TODO: retainer read
-	println("p", p.String())
+	res := mqtt.NewControlPacket(mqtt.Suback).(*mqtt.SubackPacket)
+	res.MessageID = p.MessageID
+
+	// println("p", p.String())
 	// if p.Retain {
-	if m._retainer == nil {
-		log.Println("no retainer define")
+
+	//verify
+	if len(p.Qoss) != len(p.Topics) || len(p.Qoss) == 0 {
+		ma := len(p.Qoss)
+		if len(p.Topics) > len(p.Qoss) {
+			ma = len(p.Topics)
+		}
+		res.ReturnCodes = make([]byte, ma)
+		for i := 0; i < len(res.ReturnCodes); i++ {
+			res.ReturnCodes[i] = 0x80
+		}
+		s.Send(res)
 		return
 	}
+	res.ReturnCodes = make([]byte, len(p.Qoss))
+
+	// TODO: ACL interface
+	// TODO: retainer read
 	for i := 0; i < len(p.Topics); i++ {
+		if m._retainer == nil {
+			log.Println("no retainer define")
+			res.ReturnCodes[i] = 0x80
+			continue
+		}
 		obj, err := m._retainer.Check(context.TODO(), p.Topics[i])
 		if err != nil {
 			println("err", err.Error())
+			res.ReturnCodes[i] = 0x80
 			continue
 		}
-		println("obj", obj)
+		res.ReturnCodes[i] = 0x00
+		if obj != nil {
+			println("obj", obj.String())
+		}
 	}
-	// }
+	s.Send(res)
 }
 
 func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket) {

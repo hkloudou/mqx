@@ -26,8 +26,8 @@ func New(options ...Option) (face.Auth, error) {
 		addr:     "localhost:6379",
 		db:       3,
 		prefix:   "mqtt.auth",
-		authTmpl: "$p:$u:$c",
-		listTmpl: "$p:$u:*",
+		authTmpl: "$p/$u/$c",
+		listTmpl: "$p/$u/*",
 	}
 	for _, opt := range options {
 		if opt != nil {
@@ -224,7 +224,7 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 		return err
 	}
 	//"+m.opts.prefix+".*"
-	str := fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+":*", m.opts.client.Options().DB)
+	str := fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+"/*", m.opts.client.Options().DB)
 
 	// log.Println("motion", str)
 	pubsub := m.opts.client.PSubscribe(context.TODO(),

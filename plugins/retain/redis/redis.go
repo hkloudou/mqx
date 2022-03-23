@@ -59,24 +59,29 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 }
 
 func (m *redisRetainer) Check(ctx context.Context, pattern string) (*mqtt.PublishPacket, error) {
-
-	regStr := pattern
-	regStr = strings.ReplaceAll(regStr, "#", "*")
-	regStr = strings.ReplaceAll(regStr, "+", "*")
-	print("regStr", regStr)
 	if err := face.ValidateTopicPattern(pattern); err != nil {
 		return nil, err
 	}
-	r := m.opts.client.Keys(ctx, m.opts.prefix+"/"+regStr)
+	redisStr := pattern
+	redisStr = strings.ReplaceAll(redisStr, "#", "*")
+	redisStr = strings.ReplaceAll(redisStr, "+", "*")
+
+	r := m.opts.client.Keys(ctx, m.opts.prefix+"/"+redisStr)
 	if r.Err() != nil {
 		return nil, r.Err()
 	}
 	matched := r.Val()
-	print("matched", matched)
-	if len(matched) == 0 {
+	matched2 := make([]string, 0)
+	for i := 0; i < len(matched); i++ {
+		topic := strings.TrimPrefix(matched[i], m.opts.prefix+"/")
+		if face.MatchTopic(pattern, topic) {
+			matched2 = append(matched2, topic)
+		}
+	}
+	if len(matched2) == 0 {
 		return nil, nil
 	}
-	r2 := m.opts.client.Get(ctx, matched[0])
+	r2 := m.opts.client.Get(ctx, m.opts.prefix+"/"+matched2[0])
 	if r2.Err() != nil {
 		return nil, r2.Err()
 	}

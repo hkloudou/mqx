@@ -14,7 +14,16 @@ import (
 // var ErrInvalidTopicMultilevel = errors.New("invalid Topic; multi-level wildcard must be last level")
 
 var ErrInvalidPatterunTopic = errors.New("invalid Topic; publish topic should not be pattern")
-var ErrInvalidTopicFormat = errors.New("Invalid topic;")
+var ErrInvalidTopicFormat = errors.New("Invalid topic")
+
+// // ErrInvalidTopicEmptyString is the error returned when a topic string
+// // is passed in that is 0 length
+// var ErrInvalidTopicEmptyString = errors.New("invalid Topic; empty string")
+
+// // ErrInvalidTopicMultilevel is the error returned when a topic string
+// // is passed in that has the multi level wildcard in any position but
+// // the last
+// var ErrInvalidTopicMultilevel = errors.New("invalid Topic; multi-level wildcard must be last level")
 
 const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
 
@@ -89,4 +98,30 @@ func ValidatePublishTopic(topic string) error {
 		}
 	}
 	return nil
+}
+
+func MatchTopic(pattern, topic string) bool {
+	patternArr := strings.Split(pattern, "/")
+	topicArr := strings.Split(topic, "/")
+	for i := 0; i < len(patternArr); i++ {
+		if patternArr[i] == "+" {
+			continue
+		}
+		if patternArr[i] == "#" {
+			return true
+		}
+		if patternArr[i] != topicArr[i] {
+			return false
+		}
+	}
+	// regStr := "^" + pattern
+	// if !strings.HasSuffix(pattern, "#") {
+	// 	regStr += "$"
+	// }
+	// regStr = strings.ReplaceAll(regStr, "#", "")
+	// regStr = strings.ReplaceAll(regStr, "+", "[0-9a-zA-Z_.:-]+")
+	// if matched, _ := regexp.MatchString(regStr, topic); matched {
+	// 	return true
+	// }
+	return true
 }
