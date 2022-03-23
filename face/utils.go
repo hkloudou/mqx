@@ -27,7 +27,7 @@ var ErrInvalidTopicFormat = errors.New("Invalid topic")
 
 const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
 
-func ValidateTopicPattern(pattern string) error {
+func ValidatePattern(pattern string) error {
 	if len(pattern) == 0 {
 		return ErrInvalidTopicFormat
 	}
@@ -60,7 +60,7 @@ func ValidateTopicPattern(pattern string) error {
 	return nil
 }
 
-func ValidatePublishTopic(topic string) error {
+func ValidateTopic(topic string) error {
 	if len(topic) == 0 {
 		return ErrInvalidTopicFormat
 	}
@@ -81,15 +81,6 @@ func ValidatePublishTopic(topic string) error {
 				continue
 			}
 		}
-		// if level == "+" {
-		// 	continue
-		// }
-		// if level == "#" {
-		// 	if i != len(levels)-1 {
-		// 		return ErrInvalidTopicFormat
-		// 	}
-		// 	continue
-		// }
 		match, err := regexp.MatchString(_topicLevelExp, level)
 		if err != nil {
 			return err
@@ -100,7 +91,13 @@ func ValidatePublishTopic(topic string) error {
 	return nil
 }
 
-func MatchTopic(pattern, topic string) bool {
+func MatchTopic(pattern, topic string) error {
+	if err := ValidatePattern(pattern); err != nil {
+		return err
+	}
+	if err := ValidateTopic(topic); err != nil {
+		return err
+	}
 	patternArr := strings.Split(pattern, "/")
 	topicArr := strings.Split(topic, "/")
 	for i := 0; i < len(patternArr); i++ {
@@ -108,10 +105,10 @@ func MatchTopic(pattern, topic string) bool {
 			continue
 		}
 		if patternArr[i] == "#" {
-			return true
+			return nil
 		}
 		if patternArr[i] != topicArr[i] {
-			return false
+			return errors.New("not match")
 		}
 	}
 	// regStr := "^" + pattern
@@ -123,5 +120,5 @@ func MatchTopic(pattern, topic string) bool {
 	// if matched, _ := regexp.MatchString(regStr, topic); matched {
 	// 	return true
 	// }
-	return true
+	return nil
 }

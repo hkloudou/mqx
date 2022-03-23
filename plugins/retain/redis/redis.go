@@ -43,7 +43,7 @@ func New(options ...Option) (face.Retain, error) {
 
 func (m *redisRetainer) Watch(func(data *mqtt.PublishPacket)) {}
 func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) error {
-	if err := face.ValidatePublishTopic(data.TopicName); err != nil {
+	if err := face.ValidateTopic(data.TopicName); err != nil {
 		return err
 	}
 	var buf bytes.Buffer
@@ -59,7 +59,7 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 }
 
 func (m *redisRetainer) Check(ctx context.Context, pattern string) (*mqtt.PublishPacket, error) {
-	if err := face.ValidateTopicPattern(pattern); err != nil {
+	if err := face.ValidatePattern(pattern); err != nil {
 		return nil, err
 	}
 	redisStr := pattern
@@ -74,7 +74,7 @@ func (m *redisRetainer) Check(ctx context.Context, pattern string) (*mqtt.Publis
 	matched2 := make([]string, 0)
 	for i := 0; i < len(matched); i++ {
 		topic := strings.TrimPrefix(matched[i], m.opts.prefix+"/")
-		if face.MatchTopic(pattern, topic) {
+		if face.MatchTopic(pattern, topic) == nil {
 			matched2 = append(matched2, topic)
 		}
 	}

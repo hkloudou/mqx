@@ -6,14 +6,14 @@ import (
 	"github.com/hkloudou/mqx/face"
 )
 
-func et(t bool) {
-	if !t {
+func et(t error) {
+	if t != nil {
 		panic("not equal true")
 	}
 }
 
-func ef(f bool) {
-	if f {
+func ef(f error) {
+	if f == nil {
 		panic("not equal falase")
 	}
 }
