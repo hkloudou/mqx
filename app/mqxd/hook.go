@@ -18,17 +18,19 @@ const _keyConnected = "status.connected"
 
 func newHook(aurher face.Auth, retainer face.Retain) face.Hook {
 	return &defaultHook{
-		_auther:   aurher,
-		_retainer: retainer,
-		conns:     sync.Map{},
+		_auther:    aurher,
+		_retainer:  retainer,
+		conns:      sync.Map{},
+		topicConns: sync.Map{},
 	}
 }
 
 type defaultHook struct {
-	_subHooks []face.Hook
-	_auther   face.Auth
-	_retainer face.Retain
-	conns     sync.Map
+	_subHooks  []face.Hook
+	_auther    face.Auth
+	_retainer  face.Retain
+	conns      sync.Map
+	topicConns sync.Map
 }
 
 const _maxKeepAlive = (18 * time.Hour) + (12 * time.Minute) + (15 * time.Second)
@@ -120,7 +122,6 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 	// log.Println("OnClientPublish", p.String())
 	// TODO: ACL interface
 	// TODO: retainer store
-
 	// TODO: qos:2
 	if p.Qos == 1 {
 		res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
