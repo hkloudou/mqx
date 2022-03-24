@@ -11,6 +11,10 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+func init() {
+	face.RegisterPugin("ini", MustNew)
+}
+
 type iniStruct struct {
 	_file *ini.File
 }
@@ -43,8 +47,8 @@ func (m *iniStruct) Init(customConf string) error {
 	m._file, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
 		Insensitive:         true,
-		AllowShadows:        true,
-		AllowBooleanKeys:    true,
+		// AllowShadows:        true,
+		AllowBooleanKeys: true,
 	}, data)
 	if err != nil {
 		return fmt.Errorf(`%v parse "app.ini"`, err.Error())

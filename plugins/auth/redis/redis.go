@@ -20,6 +20,7 @@ type redisAuther struct {
 	public    modelPublic
 	client    *redis.Client
 	ttl       time.Duration
+	discard   uint
 	maxTokens uint64
 }
 
@@ -48,7 +49,7 @@ type modelPublic struct {
 }
 
 func init() {
-	face.AddPugin[face.Auth]("redis", MustNew)
+	face.RegisterPugin[face.Auth]("redis", MustNew)
 	// face.DefaultAuths["redis"] = MustNew
 }
 
@@ -80,9 +81,14 @@ func New(conf face.Conf) (face.Auth, error) {
 	if err := conf.MapTo("auth.plugin.redis", &obj.conf); err != nil {
 		return nil, err
 	}
-	obj.maxTokens = uint64(conf.MustUint("auth", "max_tokens", 0))
-	obj.ttl = conf.MustDuration("auth", "ttl", time.Duration(0))
-
+	// default maxTokens and ttl
+	obj.maxTokens = uint64(conf.MustUint("auth", "max_tokens", uint(obj.maxTokens)))
+	obj.ttl = conf.MustDuration("auth", "ttl", obj.ttl)
+	obj.discard = conf.MustUint("auth", "discard", 0)
+	if obj.discard > 1 { //only 0,1 is valid value
+		obj.discard = 0
+	}
+	// log.Println("xx", conf.MustUint("auth", "ttl", 12))
 	obj.client = redis.NewClient(&redis.Options{
 		Addr:     obj.conf.Server,
 		Password: obj.conf.Password,
@@ -115,7 +121,11 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 	var opts = face.DefaultAuthRequestOptions()
 	face.WithAuthRequestMaxTokens(m.maxTokens)(&opts)
 	face.WithAuthRequestTtl(m.ttl)(&opts)
-
+	face.WithAuthRequestDiscardPolicy(face.AuthDiscardPolicy(m.discard))(&opts)
+	// AuthDiscardOld AuthDiscardPolicy = iota
+	// //DiscardNew will fail to accept new auth
+	// AuthDiscardNew
+	// log.Println("opts.Ttl", opts.Ttl, m.ttl, "m.maxTokens", m.maxTokens)
 	for _, opt := range options {
 		if opt != nil {
 			if err := opt(&opts); err != nil {

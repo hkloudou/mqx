@@ -39,7 +39,7 @@ type redisRetainer struct {
 }
 
 func init() {
-	face.AddPugin[face.Retain]("redis", MustNew)
+	face.RegisterPugin("redis", MustNew)
 }
 
 func MustNew(conf face.Conf) face.Retain {

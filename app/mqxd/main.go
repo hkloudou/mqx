@@ -1,11 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hkloudou/mqx/face"
 	_ "github.com/hkloudou/mqx/plugins/auth/redis"
-	conf "github.com/hkloudou/mqx/plugins/conf/ini"
+	_ "github.com/hkloudou/mqx/plugins/conf/ini"
 	_ "github.com/hkloudou/mqx/plugins/retain/redis"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xlib/xruntime"
@@ -19,10 +20,16 @@ func loadPlugin() {
 }
 
 func main() {
-	_conf := conf.MustNew("")
+	// _conf := conf.MustNew("")
+	_conf := face.LoadPlugin[face.Conf]("ini", "")
 	_auther := face.LoadPlugin[face.Auth](_conf.MustString("auth", "plugin", "momory"), _conf)
 	_retain := face.LoadPlugin[face.Retain](_conf.MustString("auth", "plugin", "memory"), _conf)
 
+	_auther.Update(context.TODO(), &face.AuthRequest{
+		UserName: "xx",
+		PassWord: "xx",
+		ClientId: "xx",
+	})
 	_hook := newHook(_auther, _retain)
 	tran := transport.NewTransport[mqtt.ControlPacket]("tcp", xtransport.Secure(false))
 	l, err := tran.
