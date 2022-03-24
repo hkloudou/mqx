@@ -16,9 +16,11 @@ import (
 )
 
 type redisAuther struct {
-	conf   model
-	public modelPublic
-	client *redis.Client
+	conf      model
+	public    modelPublic
+	client    *redis.Client
+	ttl       time.Duration
+	maxTokens uint64
 }
 
 // [auth.redis]
@@ -76,6 +78,8 @@ func New(conf face.Conf) (face.Auth, error) {
 		if err := conf.MapTo("auth.plugin.redis", &obj.conf); err != nil {
 			return nil, err
 		}
+		obj.maxTokens = uint64(conf.MustUint("auth", "max_tokens", 0))
+		obj.ttl = conf.MustDuration("auth", "ttl", time.Duration(0))
 	}
 	obj.client = redis.NewClient(&redis.Options{
 		Addr:     obj.conf.Server,
@@ -104,6 +108,9 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 	}
 
 	var opts = face.DefaultAuthRequestOptions()
+	face.WithAuthRequestMaxTokens(m.maxTokens)(&opts)
+	face.WithAuthRequestTtl(m.ttl)(&opts)
+
 	for _, opt := range options {
 		if opt != nil {
 			if err := opt(&opts); err != nil {
@@ -127,13 +134,13 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 		CreateAt:      uint64(time.Now().UnixNano()),
 		TokenPassword: req.PassWord,
 	}
-	ttl := time.Duration(0)
-	if opts.UseTtl {
-		ttl = opts.Ttl
-	}
+	// ttl := opts.Ttl
+	// if opts.UseTtl {
+	// 	ttl = opts.Ttl
+	// }
 	// set and check expired
-	if ttl >= 0 {
-		err := m.client.Set(ctx, key, model, ttl).Err()
+	if opts.Ttl >= 0 {
+		err := m.client.Set(ctx, key, model, opts.Ttl).Err()
 		if err != nil {
 			return err
 		}
@@ -167,7 +174,7 @@ func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options 
 		return mqtt.ErrRefusedServerUnavailable
 	}
 	var r *redis.StringCmd
-	if !opts.UseTtl {
+	if opts.Ttl == 0 {
 		r = m.client.Get(ctx, m.parseKeyFromReq(req, m.conf.authTmpl))
 	} else {
 		r = m.client.GetEx(ctx, m.parseKeyFromReq(req, m.conf.authTmpl), opts.Ttl)

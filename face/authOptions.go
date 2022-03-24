@@ -22,8 +22,8 @@ func DefaultAuthRequestOptions() authRequestOptions {
 type AuthRequestOption func(*authRequestOptions) error
 
 type authRequestOptions struct {
-	Ttl       time.Duration
-	UseTtl    bool
+	Ttl time.Duration
+	// UseTtl    bool
 	MaxTokens uint64 //0:no limit
 	Discard   AuthDiscardPolicy
 }
@@ -31,7 +31,7 @@ type authRequestOptions struct {
 func WithAuthRequestTtl(ttl time.Duration) AuthRequestOption {
 	return func(o *authRequestOptions) error {
 		o.Ttl = ttl
-		o.UseTtl = true
+		// o.UseTtl = true
 		return nil
 	}
 }
