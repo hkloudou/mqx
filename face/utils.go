@@ -24,7 +24,7 @@ var ErrInvalidTopicFormat = errors.New("Invalid topic")
 // // the last
 // var ErrInvalidTopicMultilevel = errors.New("invalid Topic; multi-level wildcard must be last level")
 
-const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
+// const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
 
 func ValidatePattern(pattern string) error {
 	if len(pattern) == 0 {

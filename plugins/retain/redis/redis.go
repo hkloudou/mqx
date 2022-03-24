@@ -11,6 +11,16 @@ import (
 	"github.com/hkloudou/xtransport/packets/mqtt"
 )
 
+type model struct {
+	Server string
+	// Pool     uint16
+	Db       uint16
+	Username string
+	Password string
+	Salt     string
+	prefix   string `ini:"-"`
+}
+
 //https://github.com/go-redis/redis/blob/master/internal/util/unsafe.go
 // stringToBytes converts string to byte slice.
 func stringToBytes(s string) []byte {
@@ -23,30 +33,42 @@ func stringToBytes(s string) []byte {
 }
 
 type redisRetainer struct {
-	opts *Options
+	conf   model
+	client *redis.Client
+	// opts *Options
 }
 
-func New(options ...Option) (face.Retain, error) {
-	opts := Options{
-		addr:   "localhost:6379",
-		db:     3,
-		prefix: "mqx.retain",
+func init() {
+	face.AddPugin[face.Retain]("redis", MustNew)
+}
+
+func MustNew(conf face.Conf) face.Retain {
+	obj, err := New(conf)
+	if err != nil {
+		panic(err)
 	}
-	for _, opt := range options {
-		if opt != nil {
-			if err := opt(&opts); err != nil {
-				return nil, err
-			}
+	return obj
+}
+
+func New(conf face.Conf) (face.Retain, error) {
+	obj := &redisRetainer{
+		conf: model{
+			prefix: "mqtt.retain",
+			Server: "127.0.0.1:6379",
+			Db:     3,
+		},
+	}
+	if conf != nil {
+		if err := conf.MapTo("retain.plugin.redis", &obj.conf); err != nil {
+			return nil, err
 		}
 	}
-	opts.client = redis.NewClient(&redis.Options{
-		Addr:     opts.addr,
-		Password: "", // no password set
-		DB:       opts.db,
+	obj.client = redis.NewClient(&redis.Options{
+		Addr:     obj.conf.Server,
+		Password: obj.conf.Password,
+		Username: obj.conf.Username,
+		DB:       int(obj.conf.Db),
 	})
-	obj := &redisRetainer{
-		opts: &opts,
-	}
 	return obj, nil
 }
 
@@ -55,7 +77,7 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 		return err
 	}
 	if len(data.Payload) == 0 {
-		return m.opts.client.Del(ctx, m.toRedisKey(data.TopicName)).Err()
+		return m.client.Del(ctx, m.toRedisKey(data.TopicName)).Err()
 	}
 	var buf bytes.Buffer
 	if err := data.Write(&buf); err != nil {
@@ -65,7 +87,7 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 	for i := 0; i < len(_s); i++ {
 		_s[i] = _s[i] ^ byte(i&0xFF)
 	}
-	return m.opts.client.Set(ctx, m.toRedisKey(data.TopicName), _s, 0).Err()
+	return m.client.Set(ctx, m.toRedisKey(data.TopicName), _s, 0).Err()
 }
 
 func (m *redisRetainer) Check(ctx context.Context, pattern string) ([]*mqtt.PublishPacket, error) {
@@ -74,7 +96,7 @@ func (m *redisRetainer) Check(ctx context.Context, pattern string) ([]*mqtt.Publ
 		return nil, err
 	}
 	//fuzzy query redis keys
-	r := m.opts.client.Keys(ctx, m.toRedisKey(strings.ReplaceAll(strings.ReplaceAll(pattern, "#", "*"), "+", "*")))
+	r := m.client.Keys(ctx, m.toRedisKey(strings.ReplaceAll(strings.ReplaceAll(pattern, "#", "*"), "+", "*")))
 	if r.Err() != nil {
 		return nil, r.Err()
 	}
@@ -89,7 +111,7 @@ func (m *redisRetainer) Check(ctx context.Context, pattern string) ([]*mqtt.Publ
 		return msgs, nil
 	}
 
-	r2 := m.opts.client.MGet(ctx, matched2...)
+	r2 := m.client.MGet(ctx, matched2...)
 	// r2 := m.opts.client.Get(ctx, m.opts.prefix+"/"+matched2[0])
 	if r2.Err() != nil {
 		return nil, r2.Err()
@@ -111,7 +133,7 @@ func (m *redisRetainer) Check(ctx context.Context, pattern string) ([]*mqtt.Publ
 }
 
 func (m *redisRetainer) Keys(ctx context.Context) ([]string, error) {
-	r := m.opts.client.Keys(context.TODO(), m.opts.prefix+"/*")
+	r := m.client.Keys(context.TODO(), m.conf.prefix+"/*")
 	if r.Err() != nil {
 		return nil, r.Err()
 	}
@@ -123,15 +145,15 @@ func (m *redisRetainer) Keys(ctx context.Context) ([]string, error) {
 }
 
 func (m *redisRetainer) toRedisKey(topic string) string {
-	if strings.HasPrefix(topic, m.opts.prefix+"/") {
+	if strings.HasPrefix(topic, m.conf.prefix+"/") {
 		return topic
 	}
-	return m.opts.prefix + "/" + topic
+	return m.conf.prefix + "/" + topic
 }
 
 func (m *redisRetainer) toTopic(key string) string {
-	if strings.HasPrefix(key, m.opts.prefix+"/") {
-		return strings.TrimPrefix(key, m.opts.prefix+"/")
+	if strings.HasPrefix(key, m.conf.prefix+"/") {
+		return strings.TrimPrefix(key, m.conf.prefix+"/")
 	}
 	return key
 }

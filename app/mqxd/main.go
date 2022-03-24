@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 
-	auth "github.com/hkloudou/mqx/plugins/auth/redis"
+	"github.com/hkloudou/mqx/face"
+	_ "github.com/hkloudou/mqx/plugins/auth/redis"
 	conf "github.com/hkloudou/mqx/plugins/conf/ini"
-	retain "github.com/hkloudou/mqx/plugins/retain/redis"
+	_ "github.com/hkloudou/mqx/plugins/retain/redis"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xlib/xruntime"
 	"github.com/hkloudou/xtransport"
@@ -14,17 +14,15 @@ import (
 	transport "github.com/hkloudou/xtransport/transports/tcp"
 )
 
+func loadPlugin() {
+	// key := _conf.MustString("auth", "plugin", "")
+}
+
 func main() {
 	_conf := conf.MustNew("")
-	if err := _conf.MapTo("auth.public", &authPublic); err != nil {
-		panic(err)
-	}
-	log.Println(authPublic)
-	_auther := auth.MustNew(_conf)
-	_retain, err := retain.New()
-	if err != nil {
-		panic(err)
-	}
+	_auther := face.LoadPlugin[face.Auth](_conf.MustString("auth", "plugin", "momory"), _conf)
+	_retain := face.LoadPlugin[face.Retain](_conf.MustString("auth", "plugin", "memory"), _conf)
+
 	_hook := newHook(_auther, _retain)
 	tran := transport.NewTransport[mqtt.ControlPacket]("tcp", xtransport.Secure(false))
 	l, err := tran.

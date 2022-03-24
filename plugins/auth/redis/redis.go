@@ -17,6 +17,7 @@ import (
 
 type redisAuther struct {
 	conf   model
+	public modelPublic
 	client *redis.Client
 }
 
@@ -27,8 +28,8 @@ type redisAuther struct {
 // password =
 // salt = dbsalt
 type model struct {
-	Server   string
-	Pool     uint16
+	Server string
+	// Pool     uint16
 	Db       uint16
 	Username string
 	Password string
@@ -36,6 +37,17 @@ type model struct {
 	authTmpl string `ini:"-"`
 	listTmpl string `ini:"-"`
 	prefix   string `ini:"-"`
+}
+
+type modelPublic struct {
+	Enable   bool
+	Username string
+	Password string
+}
+
+func init() {
+	face.AddPugin[face.Auth]("redis", MustNew)
+	// face.DefaultAuths["redis"] = MustNew
 }
 
 func MustNew(conf face.Conf) face.Auth {
@@ -53,8 +65,14 @@ func New(conf face.Conf) (face.Auth, error) {
 		listTmpl: "$p/$u/*",
 		Server:   "127.0.0.1:6379",
 		Db:       3,
-	}}
+	}, public: modelPublic{
+		Enable: false,
+	},
+	}
 	if conf != nil {
+		if err := conf.MapTo("auth.public", &obj.public); err != nil {
+			return nil, err
+		}
 		if err := conf.MapTo("auth.plugin.redis", &obj.conf); err != nil {
 			return nil, err
 		}
@@ -133,6 +151,10 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 }
 
 func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) mqtt.ConnackReturnCode {
+	// public account
+	if m.public.Enable && m.public.Username == req.UserName && m.public.Password == req.PassWord {
+		return mqtt.Accepted
+	}
 	var opts = face.DefaultAuthRequestOptions()
 	for _, opt := range options {
 		if opt != nil {

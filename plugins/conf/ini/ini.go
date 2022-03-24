@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/hkloudou/mqx/face"
 	"gopkg.in/ini.v1"
@@ -43,6 +44,7 @@ func (m *iniStruct) Init(customConf string) error {
 		IgnoreInlineComment: true,
 		Insensitive:         true,
 		AllowShadows:        true,
+		AllowBooleanKeys:    true,
 	}, data)
 	if err != nil {
 		return fmt.Errorf(`%v parse "app.ini"`, err.Error())
@@ -82,6 +84,26 @@ func (m *iniStruct) MapTo(section string, source interface{}) error {
 		return fmt.Errorf("%v mapping ini config", err)
 	}
 	return nil
+}
+
+func (m *iniStruct) MustString(section string, key string, defaultVal string) string {
+	return m._file.Section(section).Key(key).MustString(defaultVal)
+}
+
+func (m *iniStruct) MustBool(section string, key string, defaultVal bool) bool {
+	return m._file.Section(section).Key(key).MustBool(defaultVal)
+}
+
+func (m *iniStruct) MustInt(section string, key string, defaultVal int) int {
+	return m._file.Section(section).Key(key).MustInt(defaultVal)
+}
+
+func (m *iniStruct) MustUint(section string, key string, defaultVal uint) uint {
+	return m._file.Section(section).Key(key).MustUint(defaultVal)
+}
+
+func (m *iniStruct) MustDuration(section string, key string, defaultVal time.Duration) time.Duration {
+	return m._file.Section(section).Key(key).MustDuration(defaultVal)
 }
 
 // IsFile returns true if given path exists as a file (i.e. not a directory).

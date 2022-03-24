@@ -103,12 +103,8 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p
 		}
 	}
 
-	if authPublic.Enable && p.Username == authPublic.Username && string(p.Password) == authPublic.Password {
-		res.ReturnCode = 0x00
-	} else {
-		_readTls()
-		res.ReturnCode = m._auther.Check(context.TODO(), req)
-	}
+	_readTls()
+	res.ReturnCode = m._auther.Check(context.TODO(), req)
 	m.OnClientConnack(s, p, res)
 }
 
