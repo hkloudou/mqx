@@ -6,6 +6,10 @@ plugin = redis
 ttl = 0
 max_tokens = 0
 
+; 0.AuthDiscardOld(recommended)
+; 1.AuthDiscardNew(deny new connect)
+; don't change this value,otherwise you really know what's this parame
+discard = 0
 [auth.public]
 ; public account is useful
 enable = true
