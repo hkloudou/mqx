@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/hkloudou/mqx/face"
@@ -25,11 +24,6 @@ func main() {
 	_auther := face.LoadPlugin[face.Auth](_conf.MustString("auth", "plugin", "momory"), _conf)
 	_retain := face.LoadPlugin[face.Retain](_conf.MustString("auth", "plugin", "memory"), _conf)
 
-	_auther.Update(context.TODO(), &face.AuthRequest{
-		UserName: "xx",
-		PassWord: "xx",
-		ClientId: "xx",
-	})
 	_hook := newHook(_auther, _retain)
 	tran := transport.NewTransport[mqtt.ControlPacket]("tcp", xtransport.Secure(false))
 	l, err := tran.

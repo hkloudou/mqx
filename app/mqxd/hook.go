@@ -112,6 +112,9 @@ func (m *defaultHook) OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], r
 	s.Send(ack)
 	if ack.ReturnCode == mqtt.Accepted {
 		m.OnClientConnected(s, req)
+	} else {
+		time.Sleep(10 * time.Second)
+		s.Close()
 	}
 }
 
