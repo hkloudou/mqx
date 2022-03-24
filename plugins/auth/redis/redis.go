@@ -71,22 +71,27 @@ func New(conf face.Conf) (face.Auth, error) {
 		Enable: false,
 	},
 	}
-	if conf != nil {
-		if err := conf.MapTo("auth.public", &obj.public); err != nil {
-			return nil, err
-		}
-		if err := conf.MapTo("auth.plugin.redis", &obj.conf); err != nil {
-			return nil, err
-		}
-		obj.maxTokens = uint64(conf.MustUint("auth", "max_tokens", 0))
-		obj.ttl = conf.MustDuration("auth", "ttl", time.Duration(0))
+	if conf == nil {
+		return nil, fmt.Errorf("Invalid conf")
 	}
+	if err := conf.MapTo("auth.public", &obj.public); err != nil {
+		return nil, err
+	}
+	if err := conf.MapTo("auth.plugin.redis", &obj.conf); err != nil {
+		return nil, err
+	}
+	obj.maxTokens = uint64(conf.MustUint("auth", "max_tokens", 0))
+	obj.ttl = conf.MustDuration("auth", "ttl", time.Duration(0))
+
 	obj.client = redis.NewClient(&redis.Options{
 		Addr:     obj.conf.Server,
 		Password: obj.conf.Password,
 		Username: obj.conf.Username,
 		DB:       int(obj.conf.Db),
 	})
+	if err := obj.client.Ping(context.TODO()).Err(); err != nil {
+		return nil, err
+	}
 	return obj, nil
 }
 

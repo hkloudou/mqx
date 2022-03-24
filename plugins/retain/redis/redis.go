@@ -69,6 +69,9 @@ func New(conf face.Conf) (face.Retain, error) {
 		Username: obj.conf.Username,
 		DB:       int(obj.conf.Db),
 	})
+	if err := obj.client.Ping(context.TODO()).Err(); err != nil {
+		return nil, err
+	}
 	return obj, nil
 }
 
