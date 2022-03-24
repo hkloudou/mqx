@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -17,9 +16,6 @@ import (
 )
 
 type redisAuther struct {
-	// gOpt   *face.AuthOptions
-	// face.AuthOptionConfiger
-	// opts     *Options
 	conf   model
 	client *redis.Client
 }
@@ -63,20 +59,12 @@ func New(conf face.Conf) (face.Auth, error) {
 			return nil, err
 		}
 	}
-	b, _ := json.Marshal(obj.conf)
-	log.Println(string(b))
 	obj.client = redis.NewClient(&redis.Options{
 		Addr:     obj.conf.Server,
 		Password: obj.conf.Password,
 		Username: obj.conf.Username,
 		DB:       int(obj.conf.Db),
 	})
-	// obj := &redisAuther{
-	// 	opts: &opts,
-	// }
-	// if err := obj.GlobalConfig(); err != nil {
-	// 	return nil, err
-	// }
 	return obj, nil
 }
 

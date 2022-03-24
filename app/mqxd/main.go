@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	auth "github.com/hkloudou/mqx/plugins/auth/redis"
 	conf "github.com/hkloudou/mqx/plugins/conf/ini"
@@ -18,6 +19,7 @@ func main() {
 	if err := _conf.MapTo("auth.public", &authPublic); err != nil {
 		panic(err)
 	}
+	log.Println(authPublic)
 	_auther := auth.MustNew(_conf)
 	_retain, err := retain.New()
 	if err != nil {
