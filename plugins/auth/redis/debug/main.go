@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	obj, err := redis.New()
+	obj, err := redis.New(nil)
 	if err != nil {
 		panic(err)
 	}

@@ -6,4 +6,5 @@ use (
 	./plugins/auth/redis
 	./plugins/retain/redis
 	./plugins/acl/redis
+	./plugins/conf/ini
 )

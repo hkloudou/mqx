@@ -8,7 +8,7 @@ import (
 
 func (m *redisAuther) parseKeyFromReq(req *face.AuthRequest, tmpl string) string {
 	str := tmpl
-	str = strings.ReplaceAll(str, "$p", m.opts.prefix)
+	str = strings.ReplaceAll(str, "$p", m.conf.prefix)
 	str = strings.ReplaceAll(str, "$u", req.UserName)
 	str = strings.ReplaceAll(str, "$c", req.ClientId)
 	str = strings.ReplaceAll(str, "$h", req.TlsServerName)

@@ -9,7 +9,7 @@ import (
 
 func TestAuth(t *testing.T) {
 	// t.Log("")
-	obj, err := New()
+	obj, err := New(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func TestAuth(t *testing.T) {
 func TestCheck(t *testing.T) {
 	// encoding.BinaryUnmarshaler
 	// t.Log("xx")
-	obj, err := New()
+	obj, err := New(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestCheck(t *testing.T) {
 }
 
 func Test_Expired(t *testing.T) {
-	obj, err := New()
+	obj, err := New(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

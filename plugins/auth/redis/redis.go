@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -18,32 +19,61 @@ import (
 type redisAuther struct {
 	// gOpt   *face.AuthOptions
 	// face.AuthOptionConfiger
-	opts *Options
+	// opts     *Options
+	conf   model
+	client *redis.Client
 }
 
-func New(options ...Option) (face.Auth, error) {
-	opts := Options{
-		addr:     "localhost:6379",
-		db:       3,
-		prefix:   "mqx.auth",
+// [auth.redis]
+// server = 127.0.0.1:6379
+// pool = 8
+// database = 3
+// password =
+// salt = dbsalt
+type model struct {
+	Server   string
+	Pool     uint16
+	Db       uint16
+	Username string
+	Password string
+	Salt     string
+	authTmpl string `ini:"-"`
+	listTmpl string `ini:"-"`
+	prefix   string `ini:"-"`
+}
+
+func MustNew(conf face.Conf) face.Auth {
+	obj, err := New(conf)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+func New(conf face.Conf) (face.Auth, error) {
+	obj := &redisAuther{conf: model{
+		prefix:   "mqtt.auth",
 		authTmpl: "$p/$u/$c",
 		listTmpl: "$p/$u/*",
-	}
-	for _, opt := range options {
-		if opt != nil {
-			if err := opt(&opts); err != nil {
-				return nil, err
-			}
+		Server:   "127.0.0.1:6379",
+		Db:       3,
+	}}
+	if conf != nil {
+		if err := conf.MapTo("auth.plugin.redis", &obj.conf); err != nil {
+			return nil, err
 		}
 	}
-	opts.client = redis.NewClient(&redis.Options{
-		Addr:     opts.addr,
-		Password: "", // no password set
-		DB:       opts.db,
+	b, _ := json.Marshal(obj.conf)
+	log.Println(string(b))
+	obj.client = redis.NewClient(&redis.Options{
+		Addr:     obj.conf.Server,
+		Password: obj.conf.Password,
+		Username: obj.conf.Username,
+		DB:       int(obj.conf.Db),
 	})
-	obj := &redisAuther{
-		opts: &opts,
-	}
+	// obj := &redisAuther{
+	// 	opts: &opts,
+	// }
 	// if err := obj.GlobalConfig(); err != nil {
 	// 	return nil, err
 	// }
@@ -86,7 +116,7 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 		}
 	}
 
-	key := m.parseKeyFromReq(req, m.opts.authTmpl)
+	key := m.parseKeyFromReq(req, m.conf.authTmpl)
 	model := &tokenModel{
 		CreateAt:      uint64(time.Now().UnixNano()),
 		TokenPassword: req.PassWord,
@@ -97,7 +127,7 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 	}
 	// set and check expired
 	if ttl >= 0 {
-		err := m.opts.client.Set(ctx, key, model, ttl).Err()
+		err := m.client.Set(ctx, key, model, ttl).Err()
 		if err != nil {
 			return err
 		}
@@ -111,7 +141,7 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 		return nil
 	}
 	// return nil
-	return m.opts.client.Del(ctx, key).Err()
+	return m.client.Del(ctx, key).Err()
 }
 
 func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) mqtt.ConnackReturnCode {
@@ -128,9 +158,9 @@ func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options 
 	}
 	var r *redis.StringCmd
 	if !opts.UseTtl {
-		r = m.opts.client.Get(ctx, m.parseKeyFromReq(req, m.opts.authTmpl))
+		r = m.client.Get(ctx, m.parseKeyFromReq(req, m.conf.authTmpl))
 	} else {
-		r = m.opts.client.GetEx(ctx, m.parseKeyFromReq(req, m.opts.authTmpl), opts.Ttl)
+		r = m.client.GetEx(ctx, m.parseKeyFromReq(req, m.conf.authTmpl), opts.Ttl)
 	}
 
 	if r.Err() != nil {
@@ -156,10 +186,10 @@ func (m *redisAuther) Check(ctx context.Context, req *face.AuthRequest, options 
 }
 
 func (m *redisAuther) checkConfig() error {
-	if m.opts == nil {
-		return errors.New("MQX: auth.redis please init struct from New()")
-	}
-	if m.opts.client == nil {
+	// if m.opts == nil {
+	// 	return errors.New("MQX: auth.redis please init struct from New()")
+	// }
+	if m.client == nil {
 		return errors.New("MQX: auth.redis please init struct from New()")
 	}
 	return nil
@@ -169,7 +199,7 @@ func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens u
 	if maxTokens <= 0 {
 		return nil
 	}
-	r := m.opts.client.Keys(context.TODO(), m.parseKeyFromReq(req, m.opts.listTmpl))
+	r := m.client.Keys(context.TODO(), m.parseKeyFromReq(req, m.conf.listTmpl))
 	if r.Err() != nil {
 		return r.Err()
 	}
@@ -183,7 +213,7 @@ func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens u
 	items := make(tokenModelByCreateAd, 0)
 	for i := 0; i < len(keys); i++ {
 		var item tokenModel
-		if v := m.opts.client.Get(context.TODO(), keys[i]); v.Err() != nil || v.Scan(&item) != nil {
+		if v := m.client.Get(context.TODO(), keys[i]); v.Err() != nil || v.Scan(&item) != nil {
 			return face.ErrAuthServiceUnviable
 		}
 		item.Key = keys[i]
@@ -199,7 +229,7 @@ func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens u
 		keeped++
 	}
 	if len(discardedKeys) > 0 {
-		return m.opts.client.Del(context.TODO(), discardedKeys...).Err()
+		return m.client.Del(context.TODO(), discardedKeys...).Err()
 	}
 	return nil
 }
@@ -220,14 +250,14 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 			reerr = fmt.Errorf("%v", r)
 		}
 	}()
-	if err := m.opts.client.ConfigSet(context.TODO(), "notify-keyspace-events", "$Kxeg").Err(); err != nil {
+	if err := m.client.ConfigSet(context.TODO(), "notify-keyspace-events", "$Kxeg").Err(); err != nil {
 		return err
 	}
 	//"+m.opts.prefix+".*"
-	str := fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+"/*", m.opts.client.Options().DB)
+	str := fmt.Sprintf("__keyspace@%d__:"+m.conf.prefix+"/*", m.client.Options().DB)
 
 	// log.Println("motion", str)
-	pubsub := m.opts.client.PSubscribe(context.TODO(),
+	pubsub := m.client.PSubscribe(context.TODO(),
 		str,
 	)
 	defer pubsub.Close()
@@ -240,7 +270,7 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 		if string(data.Payload) == "set" || string(data.Payload) == "del" || string(data.Payload) == "expired" || string(data.Payload) == "evict" {
 			go func() {
 				for i := 0; i < 10; i++ {
-					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.opts.prefix+".", m.opts.client.Options().DB))
+					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.conf.prefix+".", m.client.Options().DB))
 					// println("remain", remain)
 					arr := strings.Split(remain, "/")
 					if len(arr) != 2 {

@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/hkloudou/mqx/app/mqxd/internal/conf"
 	auth "github.com/hkloudou/mqx/plugins/auth/redis"
+	conf "github.com/hkloudou/mqx/plugins/conf/ini"
 	retain "github.com/hkloudou/mqx/plugins/retain/redis"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xlib/xruntime"
@@ -15,14 +14,11 @@ import (
 )
 
 func main() {
-	if err := conf.Init("config"); err != nil {
+	_conf := conf.MustNew("")
+	if err := _conf.MapTo("auth.public", &authPublic); err != nil {
 		panic(err)
 	}
-	log.Println("conf.App.Te", conf.App.BrandName)
-	_auther, err := auth.New()
-	if err != nil {
-		panic(err)
-	}
+	_auther := auth.MustNew(_conf)
 	_retain, err := retain.New()
 	if err != nil {
 		panic(err)
