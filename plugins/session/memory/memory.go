@@ -62,12 +62,13 @@ func (m *memoryRession) Remove(ctx context.Context, clientid string, patterns ..
 	return nil
 }
 
-func (m *memoryRession) Clear(ctx context.Context, clientid string) {
+func (m *memoryRession) Clear(ctx context.Context, clientid string) error {
 	tmp := m.getTopics(clientid)
 	for _, topic := range tmp.List() {
 		m.getClients(topic.(string)).Remove(clientid)
 	}
 	tmp.Clear()
+	return nil
 }
 
 func (m *memoryRession) Patterns(ctx context.Context) ([]string, error) {

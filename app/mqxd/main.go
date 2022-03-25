@@ -5,11 +5,13 @@ import (
 	"io"
 
 	"github.com/hkloudou/mqx/face"
+	_ "github.com/hkloudou/mqx/plugins/auth/memory"
 	_ "github.com/hkloudou/mqx/plugins/auth/redis"
 	_ "github.com/hkloudou/mqx/plugins/conf/ini"
 	_ "github.com/hkloudou/mqx/plugins/retain/memory"
 	_ "github.com/hkloudou/mqx/plugins/retain/redis"
 	_ "github.com/hkloudou/mqx/plugins/session/memory"
+	_ "github.com/hkloudou/mqx/plugins/session/redis"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xlib/xruntime"
 	"github.com/hkloudou/xtransport"

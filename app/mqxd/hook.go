@@ -235,6 +235,9 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 	m.conns.Store(req.ClientIdentifier, s)
 
 	s.Session().Set(_keyConnected, true)
+	if req.CleanSession {
+		m._session.Clear(context.TODO(), req.ClientIdentifier)
+	}
 	log.Println(req.ClientIdentifier, ">", "connected")
 }
 

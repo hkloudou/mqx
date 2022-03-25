@@ -1,9 +1,9 @@
-## Usage redis auth plugin 
+## Usage memory auth plugin 
 > add config section to conf/app.ini
 ``` ini
 [auth]
 ; define auth plugin provider is redis
-plugin = redis
+plugin = memory
 ttl = 0
 max_tokens = 0
 
@@ -16,14 +16,5 @@ discard = 0
 enable = true
 username = mqtt
 password = public
-
-[auth.plugin.redis]
-; redis server
-server = 127.0.0.1:6379
-; redis db number
-db = 3
-; redis connect userName
-username = 
-; redis connect passWord
-password = 
+; only public account supprted in memory provider
 ```

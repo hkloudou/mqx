@@ -1,7 +1,8 @@
-## redis retain plugin
+## Usage redis retain plugin
+> add config section to conf/app.ini
 ``` ini
 [retain]
-; define retain plugin provider is redis
+; set retain plugin provider to redis
 plugin = redis
 [retain.plugin.redis]
 ; redis server
