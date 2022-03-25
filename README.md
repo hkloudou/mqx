@@ -9,7 +9,7 @@
 - [ ] acl interface
 ## auth provider
 > Authentication is an important part of most applications. MQTT protocol supports username/password authentication. Enabling authentication can effectively prevent illegal client connections.
-- [x] memory `default` https://github.com/hkloudou/mqx/tree/main/plugins/auth/redis
+- [x] memory `default` https://github.com/hkloudou/mqx/tree/main/plugins/auth/memory
 - [x] redis https://github.com/hkloudou/mqx/tree/main/plugins/auth/redis
 - [ ] http
 - [ ] jwt
