@@ -151,11 +151,10 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket
 				if err2 := _s.(xtransport.Socket).Send(p); err2 != nil {
 					log.Println("err send msg to", clients[i2])
 				}
-				log.Println("sended msg to", clients[i2])
 			}
 		}(i)
 	}
-	log.Println("clients", clients)
+	// log.Println("clients", clients)
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {

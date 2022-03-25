@@ -7,6 +7,7 @@ import (
 	"github.com/hkloudou/mqx/face"
 	_ "github.com/hkloudou/mqx/plugins/auth/redis"
 	_ "github.com/hkloudou/mqx/plugins/conf/ini"
+	_ "github.com/hkloudou/mqx/plugins/retain/memory"
 	_ "github.com/hkloudou/mqx/plugins/retain/redis"
 	_ "github.com/hkloudou/mqx/plugins/session/memory"
 	"github.com/hkloudou/xlib/xcolor"
@@ -57,29 +58,33 @@ func main() {
 			if request == nil {
 				continue
 			}
-			// log.Println("recv", request.String())
-			if request.(mqtt.ControlPacket).Type() <= 0 || request.(mqtt.ControlPacket).Type() >= 14 {
-				sock.Close()
-				return
-			}
-			switch request.(mqtt.ControlPacket).Type() {
-			case mqtt.Pingreq:
-				sock.Send(mqtt.NewControlPacket(mqtt.Pingresp))
-				break
-			case mqtt.Connect:
-				_hook.OnClientConnect(sock, request.(*mqtt.ConnectPacket))
-				break
-			case mqtt.Subscribe:
-				_hook.OnClientSubcribe(sock, request.(*mqtt.SubscribePacket))
-				break
-			case mqtt.Unsubscribe:
-				_hook.OnClientUnSubcribe(sock, request.(*mqtt.UnsubscribePacket))
-				break
-			case mqtt.Publish:
-				_hook.OnClientPublish(sock, request.(*mqtt.PublishPacket))
-				break
+			switch request := request.(type) {
+			case mqtt.ControlPacket:
+				if request.(mqtt.ControlPacket).Type() <= 0 || request.(mqtt.ControlPacket).Type() >= 14 {
+					sock.Close()
+					return
+				}
+				switch request.(mqtt.ControlPacket).Type() {
+				case mqtt.Pingreq:
+					sock.Send(mqtt.NewControlPacket(mqtt.Pingresp))
+					break
+				case mqtt.Connect:
+					_hook.OnClientConnect(sock, request.(*mqtt.ConnectPacket))
+					break
+				case mqtt.Subscribe:
+					_hook.OnClientSubcribe(sock, request.(*mqtt.SubscribePacket))
+					break
+				case mqtt.Unsubscribe:
+					_hook.OnClientUnSubcribe(sock, request.(*mqtt.UnsubscribePacket))
+					break
+				case mqtt.Publish:
+					_hook.OnClientPublish(sock, request.(*mqtt.PublishPacket))
+					break
+				default:
+					// return nil, fmt.Errorf("not support packet type:%d", data.Type())
+				}
 			default:
-				// return nil, fmt.Errorf("not support packet type:%d", data.Type())
+				return
 			}
 		}
 	}); err != nil {

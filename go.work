@@ -5,6 +5,7 @@ use (
 	./face
 	./plugins/auth/redis
 	./plugins/retain/redis
+	./plugins/retain/memory
 	./plugins/acl/redis
 	./plugins/conf/ini
 	./plugins/session/memory
