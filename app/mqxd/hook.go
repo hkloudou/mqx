@@ -141,6 +141,11 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		}
 	}
 	// TODO: publish data to client and other node(include zero byte payload packet)
+	clients, err := m._session.Match(context.TODO(), p.TopicName)
+	if err != nil {
+		return
+	}
+	log.Println("clients", clients)
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket) {

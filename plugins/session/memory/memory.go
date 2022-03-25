@@ -78,10 +78,34 @@ func (m *memoryRession) Patterns(ctx context.Context) ([]string, error) {
 	})
 	return keys, nil
 }
-func (m *memoryRession) List(ctx context.Context, pattern string) ([]string, error) {
-	ids := make([]string, 0)
-	for _, v := range m.getClients(pattern).List() {
-		ids = append(ids, v.(string))
+
+func (m *memoryRession) Match(ctx context.Context, topic string) ([]string, error) {
+	patterns, err := m.Patterns(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return ids, nil
+	matched := make([]string, 0)
+	for i := 0; i < len(patterns); i++ {
+		if face.MatchTopic(patterns[i], topic) == nil {
+			matched = append(matched, patterns[i])
+		}
+	}
+	lists := set.New(set.NonThreadSafe)
+	for i := 0; i < len(matched); i++ {
+		clis := m.getClients(matched[i])
+		lists.Merge(clis)
+	}
+	keys := make([]string, 0)
+	for _, v := range lists.List() {
+		keys = append(keys, v.(string))
+	}
+	return keys, nil
 }
+
+// func (m *memoryRession) List(ctx context.Context, pattern string) ([]string, error) {
+// 	ids := make([]string, 0)
+// 	// for _, v := range m.getClients(pattern).List() {
+// 	// 	ids = append(ids, v.(string))
+// 	// }
+// 	return ids, nil
+// }
