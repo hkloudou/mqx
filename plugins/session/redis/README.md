@@ -1,9 +1,9 @@
-## redis retain plugin
+## redis session plugin
 ``` ini
-[retain]
+[session]
 ; define retain plugin provider is redis
-plugin = redis
-[retain.plugin.redis]
+plugin = memory
+[session.plugin.redis]
 ; redis server
 server = 127.0.0.1:6379
 ; redis db number

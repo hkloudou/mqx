@@ -1,4 +1,4 @@
-## redis session plugin
+## memory session plugin
 ``` ini
 [session]
 ; define session plugin provider is memory
