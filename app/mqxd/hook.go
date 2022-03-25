@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xtransport"
 	"github.com/hkloudou/xtransport/packets/mqtt"
@@ -16,19 +15,19 @@ import (
 const _keyFirstConnPacket = "status.firstpacket"
 const _keyConnected = "status.connected"
 
-func newHook(aurher face.Auth, retainer face.Retain) face.Hook {
+func newHook(aurher face.Auth, retainer face.Retain, session face.Session) face.Hook {
 	return &defaultHook{
-		_auther:    aurher,
-		_retainer:  retainer,
-		conns:      sync.Map{},
-		topicConns: sync.Map{},
+		_auther:   aurher,
+		_retainer: retainer,
+		_session:  session,
+		conns:     sync.Map{},
 	}
 }
 
 type defaultHook struct {
-	_subHooks  []face.Hook
 	_auther    face.Auth
 	_retainer  face.Retain
+	_session   face.Session
 	conns      sync.Map
 	topicConns sync.Map
 }
@@ -123,7 +122,6 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		s.Close()
 		return
 	}
-	// log.Println("OnClientPublish", p.String())
 	// TODO: ACL interface
 	// TODO: retainer store
 	// TODO: qos:2
@@ -142,7 +140,7 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 			return
 		}
 	}
-	// TODO: publish data to client and other node
+	// TODO: publish data to client and other node(include zero byte payload packet)
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket) {
@@ -153,7 +151,7 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 	res := mqtt.NewControlPacket(mqtt.Suback).(*mqtt.SubackPacket)
 	res.MessageID = p.MessageID
 
-	log.Println("OnClientSubcribe", p.String())
+	// log.Println("OnClientSubcribe", p.String())
 	// verify
 	if len(p.Qoss) != len(p.Topics) || len(p.Qoss) == 0 {
 		ma := len(p.Qoss)
@@ -172,7 +170,11 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 	// TODO: ACL interface
 	// TODO: retainer read
 	retaineds := make([]*mqtt.PublishPacket, 0)
+
 	for i := 0; i < len(p.Topics); i++ {
+		if err := m._session.Add(context.TODO(), s.Session().GetString("auth.clientid"), p.Topics[i]); err != nil {
+			res.ReturnCodes[i] = 0x80
+		}
 		if m._retainer == nil {
 			log.Println("no retainer define")
 			res.ReturnCodes[i] = 0x80
@@ -203,18 +205,21 @@ func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket]
 
 	res := mqtt.NewControlPacket(mqtt.Unsuback).(*mqtt.UnsubackPacket)
 	res.MessageID = p.MessageID
+	if err := m._session.Remove(context.TODO(), s.Session().GetString("auth.clientid"), p.Topics...); err != nil {
+		log.Println("un suberr", err.Error())
+	}
 	s.Send(res)
 }
 
 func (m *defaultHook) OnClientConnected(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket) {
-	connid := uuid.New().String()
-	s.Session().Set("status.connid", connid)
+	// connid := uuid.New().String()
+	s.Session().Set("status.connid", req.ClientIdentifier)
 	s.Session().Set("auth.username", req.Username)
 	s.Session().Set("auth.clientid", req.ClientIdentifier)
-	m.conns.Store(connid, s)
+	m.conns.Store(req.ClientIdentifier, s)
 
 	s.Session().Set(_keyConnected, true)
-	log.Println(connid, ">", "connected")
+	log.Println(req.ClientIdentifier, ">", "connected")
 }
 
 func (m *defaultHook) OnClientDisConnected(s xtransport.Socket[mqtt.ControlPacket]) {

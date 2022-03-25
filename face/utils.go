@@ -26,6 +26,22 @@ var ErrInvalidTopicFormat = errors.New("Invalid topic")
 
 // const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
 
+// Topic Names and Topic Filters
+// The MQTT v3.1.1 spec clarifies a number of ambiguities with regard
+// to the validity of Topic strings.
+// - A Topic must be between 1 and 65535 bytes.
+// - A Topic is case sensitive.
+// - A Topic may contain whitespace.
+// - A Topic containing a leading forward slash is different than a Topic without.
+// - A Topic may be "/" (two levels, both empty string).
+// - A Topic must be UTF-8 encoded.
+// - A Topic may contain any number of levels.
+// - A Topic may contain an empty level (two forward slashes in a row).
+// - A TopicName may not contain a wildcard.
+// - A TopicFilter may only have a # (multi-level) wildcard as the last level.
+// - A TopicFilter may contain any number of + (single-level) wildcards.
+// - A TopicFilter with a # will match the absence of a level
+//     Example:  a subscription to "foo/#" will match messages published to "foo".
 func ValidatePattern(pattern string) error {
 	if len(pattern) == 0 {
 		return ErrInvalidTopicFormat

@@ -7,4 +7,5 @@ use (
 	./plugins/retain/redis
 	./plugins/acl/redis
 	./plugins/conf/ini
+	./plugins/session/memory
 )
