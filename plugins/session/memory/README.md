@@ -1,6 +1,6 @@
-## redis retain plugin
+## redis session plugin
 ``` ini
-[retain]
-; define retain plugin provider is memory
+[session]
+; define session plugin provider is memory
 plugin = memory
 ```
