@@ -23,8 +23,8 @@ func main() {
 	// _conf := conf.MustNew("")
 	_conf := face.LoadPlugin[face.Conf]("ini", "")
 	_auther := face.LoadPlugin[face.Auth](_conf.MustString("auth", "plugin", "momory"), _conf)
-	_retain := face.LoadPlugin[face.Retain](_conf.MustString("auth", "plugin", "memory"), _conf)
-	_session := face.LoadPlugin[face.Session](_conf.MustString("auth", "plugin", "memory"), _conf)
+	_retain := face.LoadPlugin[face.Retain](_conf.MustString("retain", "plugin", "memory"), _conf)
+	_session := face.LoadPlugin[face.Session](_conf.MustString("session", "plugin", "memory"), _conf)
 	_hook := newHook(_auther, _retain, _session)
 	tran := transport.NewTransport[mqtt.ControlPacket]("tcp", xtransport.Secure(false))
 	l, err := tran.

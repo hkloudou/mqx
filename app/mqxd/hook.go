@@ -145,6 +145,11 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 	if err != nil {
 		return
 	}
+	for i := 0; i < len(clients); i++ {
+		if _s, found := m.conns.Load(clients[i]); found && _s != nil {
+			_s.(xtransport.Socket[mqtt.ControlPacket]).Send(p)
+		}
+	}
 	log.Println("clients", clients)
 }
 
