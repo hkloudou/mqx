@@ -1,4 +1,4 @@
-github.com/hkloudou/xtransport v1.1.5 h1:t0lZU/8YK5ESABM9L5cWYLEFdgeZ54nWOWIsDI6JvS0=
-github.com/hkloudou/xtransport v1.1.5/go.mod h1:RAU6WtLWmQM3K1mlZQS8xlimeUxTjm8LcN+4Up+kYCs=
-github.com/hkloudou/xtransport/packets/mqtt v1.1.1 h1:jiznxp+hPZpRmSKua+F0KOpnqEu6sKRzB+YKCregBSQ=
-github.com/hkloudou/xtransport/packets/mqtt v1.1.1/go.mod h1:Tq6JXlchvjZ1PfwfdAq9uJVxaI45TBBIZfBAcFkqXtk=
+github.com/hkloudou/xtransport v1.1.7 h1:lVhGZ6hKPPRgFzvLWu7FbY0Msr3VxtFTp1a7ei4ev/U=
+github.com/hkloudou/xtransport v1.1.7/go.mod h1:AtcoR7/m5zARlmpcliG5OTGqZhP7v75425KHZzPZEtg=
+github.com/hkloudou/xtransport/packets/mqtt v1.1.2 h1:3/bbyMSqN/gvDr2s1gGgtURRTQphLhhpyMUgjRAn5C4=
+github.com/hkloudou/xtransport/packets/mqtt v1.1.2/go.mod h1:qwgxPPcqjy+6oZi22V78La3TEtsMUIt0LwA+M0Pwtlk=

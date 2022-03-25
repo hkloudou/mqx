@@ -83,7 +83,7 @@ func (m *redisRetainer) Store(ctx context.Context, data *mqtt.PublishPacket) err
 		return m.client.Del(ctx, m.toRedisKey(data.TopicName)).Err()
 	}
 	var buf bytes.Buffer
-	if err := data.Write(&buf); err != nil {
+	if _, err := data.WriteTo(&buf); err != nil {
 		return err
 	}
 	_s := buf.Bytes()

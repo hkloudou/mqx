@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/hkloudou/mqx/face"
 	_ "github.com/hkloudou/mqx/plugins/auth/redis"
@@ -26,7 +27,7 @@ func main() {
 	_retain := face.LoadPlugin[face.Retain](_conf.MustString("retain", "plugin", "memory"), _conf)
 	_session := face.LoadPlugin[face.Session](_conf.MustString("session", "plugin", "memory"), _conf)
 	_hook := newHook(_auther, _retain, _session)
-	tran := transport.NewTransport[mqtt.ControlPacket]("tcp", xtransport.Secure(false))
+	tran := transport.NewTransport("tcp", xtransport.Secure(false))
 	l, err := tran.
 		Listen(":1883")
 	if err != nil {
@@ -36,7 +37,7 @@ func main() {
 	xruntime.PrintInfo()
 	println()
 	println(xcolor.Green(tran.String() + " listen on [" + l.Addr() + "]"))
-	if err := l.Accept(func(sock xtransport.Socket[mqtt.ControlPacket]) {
+	if err := l.Accept(func(sock xtransport.Socket) {
 		defer func() {
 			if r := recover(); r != nil {
 				println(xcolor.Red(fmt.Sprintf("%v", r)))
@@ -45,18 +46,25 @@ func main() {
 			_hook.OnClientDisConnected(sock)
 		}()
 		for {
-			request, err := sock.Recv(mqtt.ReadPacket)
+			request, err := sock.Recv(func(r io.Reader) (interface{}, error) {
+				i, err := mqtt.ReadPacket(r)
+				return i, err
+			})
+			// request, err := sock.Recv(mqtt.ReadPacket)
 
 			if err != nil {
 				println(xcolor.Red(err.Error()))
 				return
 			}
+			if request == nil {
+				continue
+			}
 			// log.Println("recv", request.String())
-			if request.Type() <= 0 || request.Type() >= 14 {
+			if request.(mqtt.ControlPacket).Type() <= 0 || request.(mqtt.ControlPacket).Type() >= 14 {
 				sock.Close()
 				return
 			}
-			switch request.Type() {
+			switch request.(mqtt.ControlPacket).Type() {
 			case mqtt.Pingreq:
 				sock.Send(mqtt.NewControlPacket(mqtt.Pingresp))
 				break

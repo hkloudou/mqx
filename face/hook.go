@@ -7,14 +7,14 @@ import (
 
 // Hook message io
 type Hook interface {
-	OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnectPacket)
-	OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket, ack *mqtt.ConnackPacket)
-	OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.PublishPacket)
-	OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket)
-	OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket)
+	OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket)
+	OnClientConnack(s xtransport.Socket, req *mqtt.ConnectPacket, ack *mqtt.ConnackPacket)
+	OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket)
+	OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket)
+	OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket)
 
-	OnClientConnected(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket)
-	OnClientDisConnected(s xtransport.Socket[mqtt.ControlPacket])
+	OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket)
+	OnClientDisConnected(s xtransport.Socket)
 	// OnClientConnect(evt *HookEvtClientConnect)
 	// OnClientPublish(evt *HookEvtClientPublish)
 	// OnClientSubcribe(evt *HookEvtClientSubcribe)

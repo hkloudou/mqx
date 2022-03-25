@@ -34,7 +34,7 @@ type defaultHook struct {
 
 const _maxKeepAlive = (18 * time.Hour) + (12 * time.Minute) + (15 * time.Second)
 
-func (m *defaultHook) OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.ConnectPacket) {
+func (m *defaultHook) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket) {
 	// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
 	// After a Network Connection is established by a Client to a Server, the first Packet sent from the Client to the Server MUST be a CONNECT Packet [MQTT-3.1.0-1].
 	// A Client can only send the CONNECT Packet once over a Network Connection. The Server MUST process a second CONNECT Packet sent from a Client as a protocol violation and disconnect the Client [MQTT-3.1.0-2].  See section 4.8 for information about handling errors.
@@ -107,7 +107,7 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket[mqtt.ControlPacket], p
 	m.OnClientConnack(s, p, res)
 }
 
-func (m *defaultHook) OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket, ack *mqtt.ConnackPacket) {
+func (m *defaultHook) OnClientConnack(s xtransport.Socket, req *mqtt.ConnectPacket, ack *mqtt.ConnackPacket) {
 	s.Send(ack)
 	if ack.ReturnCode == mqtt.Accepted {
 		m.OnClientConnected(s, req)
@@ -117,7 +117,7 @@ func (m *defaultHook) OnClientConnack(s xtransport.Socket[mqtt.ControlPacket], r
 	}
 }
 
-func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.PublishPacket) {
+func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 	if !s.Session().GetBool(_keyConnected) {
 		s.Close()
 		return
@@ -146,14 +146,19 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket[mqtt.ControlPacket], p
 		return
 	}
 	for i := 0; i < len(clients); i++ {
-		if _s, found := m.conns.Load(clients[i]); found && _s != nil {
-			_s.(xtransport.Socket[mqtt.ControlPacket]).Send(p)
-		}
+		go func(i2 int) {
+			if _s, found := m.conns.Load(clients[i2]); found && _s != nil {
+				if err2 := _s.(xtransport.Socket).Send(p); err2 != nil {
+					log.Println("err send msg to", clients[i2])
+				}
+				log.Println("sended msg to", clients[i2])
+			}
+		}(i)
 	}
 	log.Println("clients", clients)
 }
 
-func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.SubscribePacket) {
+func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 	if !s.Session().GetBool(_keyConnected) {
 		s.Close()
 		return
@@ -203,11 +208,13 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket[mqtt.ControlPacket], 
 	}
 	s.Send(res)
 	for i := 0; i < len(retaineds); i++ {
-		s.Send(retaineds[i])
+		go func(i2 int) {
+			s.Send(retaineds[i2])
+		}(i)
 	}
 }
 
-func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket], p *mqtt.UnsubscribePacket) {
+func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket) {
 	if !s.Session().GetBool(_keyConnected) {
 		s.Close()
 		return
@@ -221,7 +228,7 @@ func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket[mqtt.ControlPacket]
 	s.Send(res)
 }
 
-func (m *defaultHook) OnClientConnected(s xtransport.Socket[mqtt.ControlPacket], req *mqtt.ConnectPacket) {
+func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
 	// connid := uuid.New().String()
 	s.Session().Set("status.connid", req.ClientIdentifier)
 	s.Session().Set("auth.username", req.Username)
@@ -232,7 +239,7 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket[mqtt.ControlPacket],
 	log.Println(req.ClientIdentifier, ">", "connected")
 }
 
-func (m *defaultHook) OnClientDisConnected(s xtransport.Socket[mqtt.ControlPacket]) {
+func (m *defaultHook) OnClientDisConnected(s xtransport.Socket) {
 	s.Session().Set(_keyConnected, false)
 	se := s.Session()
 	connid := se.GetString("status.connid")

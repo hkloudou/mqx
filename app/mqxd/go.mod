@@ -6,8 +6,8 @@ require (
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hkloudou/xlib v1.0.55 // indirect
-	github.com/hkloudou/xtransport v1.1.5 // indirect
-	github.com/hkloudou/xtransport/transports/tcp v1.0.2 // indirect
+	github.com/hkloudou/xtransport v1.1.7 // indirect
+	github.com/hkloudou/xtransport/transports/tcp v1.0.3 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
