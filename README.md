@@ -34,4 +34,11 @@ https://github.com/hkloudou/mqx/tree/main/plugins/retain/memory
 - [ ] nrpc(https://github.com/hkloudou/nrpc)
 - [ ] s3
 ## other
-- [ ] $sys and $usr message support
+### - [ ] $SYS message
+> system message
+### - [ ] $SHARE message
+> shared message `$shared/group/topic`
+### - [ ] $USR message 
+> user message `$USR/username/topic`
+### - [ ] $CID message
+> cid message `$CID/clientid/topic`
