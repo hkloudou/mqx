@@ -21,7 +21,7 @@
 ## session provider
 - [x] memory `default`
 https://github.com/hkloudou/mqx/tree/main/plugins/session/memory
-- [ ] redis
+- [x] redis https://github.com/hkloudou/mqx/tree/main/plugins/session/redis
 - [ ] disk
 - [ ] nrpc(https://github.com/hkloudou/nrpc)
 ## retain provider
