@@ -50,8 +50,6 @@ func main() {
 				i, err := mqtt.ReadPacket(r)
 				return i, err
 			})
-			// request, err := sock.Recv(mqtt.ReadPacket)
-
 			if err != nil {
 				println(xcolor.Red(err.Error()))
 				return
