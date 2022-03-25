@@ -1,4 +1,5 @@
-# mqx
+# mqx (developing, not stable)
+
 
 # auth pugin
 > Authentication is an important part of most applications. MQTT protocol supports username/password authentication. Enabling authentication can effectively prevent illegal client connections.
