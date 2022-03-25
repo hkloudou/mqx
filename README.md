@@ -37,11 +37,26 @@ https://github.com/hkloudou/mqx/tree/main/plugins/retain/redis
 - [x] retain interface
 - [x] session interface
 - [ ] acl interface
-## provider
-- [x] redis auth provider
-- [x] memory session provider
-- [ ] redis session provider
-- [x] memory retain provider
-- [x] redis retain provider
+## auth provider
+- [x] redis
+- [ ] http
+- [ ] jwt
+- [ ] ldap
+- [ ] mysql
+- [ ] mongo
+- [ ] postgresql
+- [ ] nrpc(https://github.com/hkloudou/nrpc)
+## session provider(Subscription relationship)
+- [x] memory
+- [ ] redis
+- [ ] disk
+- [ ] nrpc(https://github.com/hkloudou/nrpc)
+## retain provider
+- [x] memory
+- [x] redis
+- [ ] disk
+- [ ] etcd
+- [ ] nrpc(https://github.com/hkloudou/nrpc)
+- [ ] s3
 ## other
 - [ ] $sys and $usr message support
