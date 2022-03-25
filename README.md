@@ -17,7 +17,8 @@
 - [ ] mongo
 - [ ] postgresql
 - [ ] nrpc(https://github.com/hkloudou/nrpc)
-- [x]memory `default`
+## session provider
+- [x] memory `default`
 https://github.com/hkloudou/mqx/tree/main/plugins/session/memory
 - [ ] redis
 - [ ] disk
