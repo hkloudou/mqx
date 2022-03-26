@@ -11,7 +11,7 @@ require (
 	github.com/hkloudou/xlib v1.0.56 // indirect
 	github.com/hkloudou/xtransport v1.1.7 // indirect
 	github.com/hkloudou/xtransport/transports/tcp v1.0.3 // indirect
-	github.com/hkloudou/xtransport/transports/ws v1.0.4 // indirect
+	github.com/hkloudou/xtransport/transports/ws v1.0.5 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

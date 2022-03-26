@@ -21,8 +21,8 @@ github.com/hkloudou/xtransport/transports/tcp v1.0.2 h1:0YOYknbL76uyS6A8Na3nZzYG
 github.com/hkloudou/xtransport/transports/tcp v1.0.2/go.mod h1:/cfckh0y2GW6rWB7fZw68zoibmxuPvIXlJXTa7PZ+XE=
 github.com/hkloudou/xtransport/transports/tcp v1.0.3 h1:MqpgBe4sF3yRUK+PwoeHUP5wm4y0n/RvkXmVar/0v/Y=
 github.com/hkloudou/xtransport/transports/tcp v1.0.3/go.mod h1:vJyxswNmTNbefRUP8mFtWk6498YGc8k7enGZLLOPKu4=
-github.com/hkloudou/xtransport/transports/ws v1.0.4 h1:x6DjVzF8oq6vbVOBll+Iz+6QVkdJvNnohCGEn7IDvzw=
-github.com/hkloudou/xtransport/transports/ws v1.0.4/go.mod h1:dQjNJtYgjIASBRhMLGVhC5ahcUmTd/Fr3edYpfI2ttw=
+github.com/hkloudou/xtransport/transports/ws v1.0.5 h1:nx405XZF7RDqHdk6/miEHGJHkD4+FDeJQDTglOyeerI=
+github.com/hkloudou/xtransport/transports/ws v1.0.5/go.mod h1:dQjNJtYgjIASBRhMLGVhC5ahcUmTd/Fr3edYpfI2ttw=
 github.com/mattn/go-colorable v0.1.4 h1:snbPLB8fVfU9iwbbo30TPtbLRzwWu6aJS6Xh4eaaviA=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.9/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
