@@ -279,7 +279,6 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 
 	s.Session().Set(_keyConnected, true)
 	if req.CleanSession {
-		s.Session().Set("auth.clearsession", true)
 		m._session.Clear(context.TODO(), req.ClientIdentifier)
 	} else {
 		patterns, err := m._session.ClientPatterns(context.TODO(), req.ClientIdentifier)
@@ -307,10 +306,6 @@ func (m *defaultHook) OnClientDisConnected(s xtransport.Socket) {
 	se := s.Session()
 	connid := se.GetString("status.connid")
 	m.conns.Delete(connid)
-	if s.Session().GetBool("auth.clearsession") {
-		println("please clear session")
-		m._session.Clear(context.TODO(), connid)
-	}
 	log.Println(connid, ">", "disConnected")
 }
 
