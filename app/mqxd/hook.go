@@ -205,7 +205,7 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 
 	// TODO: ACL interface
 
-	// check retain when subscribe
+	// check retain on subscribe
 	res.ReturnCodes = make([]byte, len(p.Qoss))
 	retaineds, err := m.checkRetain(s, p.Topics)
 	if err != nil {
@@ -252,8 +252,7 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 			s.Close()
 		}
 
-		// check retain when connected
-		log.Println("check retain when connected", patterns)
+		// check retain on connected
 		retaineds, err := m.checkRetain(s, patterns)
 		if err != nil {
 			s.Close()
