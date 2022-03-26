@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -273,7 +272,7 @@ func (m *redisAuther) MotionExpired(fc func(userName, clientId string) error) er
 	//"+m.opts.prefix+".*"
 	str := fmt.Sprintf("__keyspace@%d__:"+m.conf.prefix+"/*", m.client.Options().DB)
 
-	log.Println("motion", str)
+	// log.Println("motion", str)
 	pubsub := m.client.PSubscribe(context.TODO(),
 		str,
 	)

@@ -1,9 +1,7 @@
 package memory
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"strings"
 
@@ -133,8 +131,8 @@ func New(conf face.Conf) (face.Acl, error) {
 	obj.model.SubDeny = loopRead("acl.plugin.memory.sub.deny.%d")
 
 	// log.Println(len(obj.model))
-	b, _ := json.Marshal(obj.model)
-	log.Println(string(b))
+	// b, _ := json.Marshal(obj.model)
+	// log.Println(string(b))
 	return obj, nil
 }
 

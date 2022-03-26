@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"unsafe"
 
@@ -116,7 +115,7 @@ func (m *redisSessioner) Remove(ctx context.Context, clientid string, patterns .
 }
 func (m *redisSessioner) Match(ctx context.Context, topic string) ([]string, error) {
 	redisPatternKey, err := m.buildRedisSearchPattern(topic)
-	log.Println("search", redisPatternKey)
+	// log.Println("search", redisPatternKey)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +135,7 @@ func (m *redisSessioner) Match(ctx context.Context, topic string) ([]string, err
 	for i := 0; i < len(matched); i++ {
 		r := m.client.SMembers(ctx, matched[i])
 		if r.Err() != nil {
-			log.Println("err", r.Err())
+			// log.Println("err", r.Err())
 			return nil, r.Err()
 		}
 		tmps := r.Val()
