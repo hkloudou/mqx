@@ -67,9 +67,9 @@ func MatchTopic(pattern, topic string) error {
 	if err := ValidatePattern(pattern); err != nil {
 		return err
 	}
-	if err := ValidateTopic(topic); err != nil {
-		return err
-	}
+	// if err := ValidateTopic(topic); err != nil {
+	// 	return err
+	// }
 	patterns := strings.Split(pattern, "/")
 	topics := strings.Split(topic, "/")
 	for i := 0; i < len(patterns); i++ {
@@ -77,7 +77,11 @@ func MatchTopic(pattern, topic string) error {
 			continue
 		}
 		if patterns[i] == "#" {
-			return nil
+			if i == 0 && patterns[i] == "#" && strings.HasPrefix(topics[0], "$") {
+				//root section // #/ don't match $SYS/xx
+			} else {
+				return nil
+			}
 		}
 		if patterns[i] != topics[i] {
 			return errors.New("not match")

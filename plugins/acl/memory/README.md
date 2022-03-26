@@ -1,22 +1,10 @@
-[session]
-plugin = redis
-[session.plugin.redis]
-server = ${MQX_REDIS_SERVER}
-db = ${MQX_REDIS_DB}
+## Usage memory acl plugin 
+> add config acl to conf/app.ini
+``` ini
+[acl]
+; define session plugin provider is memory
+plugin = memory
 
-[retain]
-plugin = redis
-[retain.plugin.redis]
-server = ${MQX_REDIS_SERVER}
-db = ${MQX_REDIS_DB}
-
-[auth]
-plugin = redis
-ttl = 1m
-max_tokens = 1
-[auth.plugin.redis]
-server = ${MQX_REDIS_SERVER}
-db = ${MQX_REDIS_DB}
 
 
 ; allow all user subscribe public topic
@@ -49,3 +37,4 @@ user = mqtt
 patterns = "$$usr/#"
 cidr = "127.0.0.1/16"
 user = mqtt
+```

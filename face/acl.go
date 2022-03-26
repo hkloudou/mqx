@@ -1,8 +1,10 @@
 package face
 
-type ACL interface {
-	SubcribeAble(userName string, topicPattern string, qos int, retain bool)
-	PublishAble(userName string, topicPattern string, qos int, retain bool)
+import "github.com/hkloudou/xtransport"
+
+type Acl interface {
+	Subcribe(s xtransport.Socket, qos byte, retain bool, pattern string) (bool, error)
+	Publish(s xtransport.Socket, qos byte, retain bool, pattern string) (bool, error)
 }
 
 /*

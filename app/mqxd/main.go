@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/hkloudou/mqx/face"
+	_ "github.com/hkloudou/mqx/plugins/acl/memory"
 	_ "github.com/hkloudou/mqx/plugins/auth/memory"
 	_ "github.com/hkloudou/mqx/plugins/auth/redis"
 	_ "github.com/hkloudou/mqx/plugins/conf/ini"
@@ -28,10 +29,15 @@ func loadPlugin() {
 func main() {
 	// _conf := conf.MustNew("")
 	_conf := face.LoadPlugin[face.Conf]("ini", "")
+	println(xcolor.Green(fmt.Sprintf("%-15s", "load auth")), xcolor.Yellow(_conf.MustString("auth", "plugin", "momory")))
+	println(xcolor.Green(fmt.Sprintf("%-15s", "load retain")), xcolor.Yellow(_conf.MustString("retain", "plugin", "momory")))
+	println(xcolor.Green(fmt.Sprintf("%-15s", "load session")), xcolor.Yellow(_conf.MustString("session", "plugin", "momory")))
+	println(xcolor.Green(fmt.Sprintf("%-15s", "load acl")), xcolor.Yellow(_conf.MustString("acl", "plugin", "momory")))
 	_auther := face.LoadPlugin[face.Auth](_conf.MustString("auth", "plugin", "momory"), _conf)
 	_retain := face.LoadPlugin[face.Retain](_conf.MustString("retain", "plugin", "memory"), _conf)
 	_session := face.LoadPlugin[face.Session](_conf.MustString("session", "plugin", "memory"), _conf)
-	_hook := newHook(_auther, _retain, _session)
+	_acl := face.LoadPlugin[face.Acl](_conf.MustString("acl", "plugin", "memory"), _conf)
+	_hook := newHook(_auther, _retain, _session, _acl)
 	tran := transport.NewTransport("tcp", xtransport.Secure(false))
 	l, err := tran.
 		Listen(":1883")

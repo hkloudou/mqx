@@ -12,6 +12,7 @@ import (
 )
 
 func init() {
+	os.Setenv("$", "$")
 	face.RegisterPugin("ini", MustNew)
 }
 
@@ -48,7 +49,9 @@ func (m *iniStruct) Init(customConf string) error {
 		IgnoreInlineComment: true,
 		Insensitive:         true,
 		// AllowShadows:        true,
-		AllowBooleanKeys: true,
+		// AllowNonUniqueSections:     true,
+		AllowDuplicateShadowValues: true,
+		AllowBooleanKeys:           true,
 	}, data)
 	if err != nil {
 		return fmt.Errorf(`%v parse "app.ini"`, err.Error())
