@@ -62,9 +62,9 @@ func MustNew(conf face.Conf) face.Session {
 func New(conf face.Conf) (face.Session, error) {
 	obj := &redisSessioner{
 		conf: model{
-			clientPrefix:   "mqtt.session/clients",
-			pubTopicPrefix: "mqtt.session/topics/pub",
-			priTopicPrefix: "mqtt.session/topics/pri",
+			clientPrefix:   "mqtt.sess/cli",
+			pubTopicPrefix: "mqtt.sess/pub",
+			priTopicPrefix: "mqtt.sess/pri",
 			Server:         "127.0.0.1:6379",
 			Db:             3,
 		},

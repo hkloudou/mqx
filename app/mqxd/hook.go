@@ -208,12 +208,16 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 	// check retain on subscribe
 	res.ReturnCodes = make([]byte, len(p.Qoss))
 	retaineds, err := m.checkRetain(s, p.Topics)
+	if err == nil {
+		err = m._session.Add(context.Background(), s.Session().GetString("auth.clientid"), p.Topics...)
+	}
 	if err != nil {
 		res.ReturnCodes = make([]byte, len(p.Qoss))
 		for i := 0; i < len(res.ReturnCodes); i++ {
 			res.ReturnCodes[i] = 0x80
 		}
 	}
+
 	s.Send(res)
 	for i := 0; i < len(retaineds); i++ {
 		if err := s.Send(retaineds[i]); err != nil {
