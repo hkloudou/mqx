@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"unsafe"
@@ -10,15 +11,23 @@ import (
 	"github.com/hkloudou/mqx/face"
 )
 
+type keyType uint8
+
+const (
+	ClientKeyType keyType = iota
+	TopicKeyType
+)
+
 type model struct {
 	Server string
 	// Pool     uint16
-	Db           uint16
-	Username     string
-	Password     string
-	Salt         string
-	clientPrefix string `ini:"-"`
-	topicPrefix  string `ini:"-"`
+	Db             uint16
+	Username       string
+	Password       string
+	Salt           string
+	clientPrefix   string `ini:"-"`
+	pubTopicPrefix string `ini:"-"`
+	priTopicPrefix string `ini:"-"`
 }
 
 //https://github.com/go-redis/redis/blob/master/internal/util/unsafe.go
@@ -53,10 +62,11 @@ func MustNew(conf face.Conf) face.Session {
 func New(conf face.Conf) (face.Session, error) {
 	obj := &redisSessioner{
 		conf: model{
-			clientPrefix: "mqtt.session.clients",
-			topicPrefix:  "mqtt.session.topics",
-			Server:       "127.0.0.1:6379",
-			Db:           3,
+			clientPrefix:   "mqtt.session/clients",
+			pubTopicPrefix: "mqtt.session/topics/pub",
+			priTopicPrefix: "mqtt.session/topics/pri",
+			Server:         "127.0.0.1:6379",
+			Db:             3,
 		},
 	}
 	if conf != nil {
@@ -79,11 +89,11 @@ func (m *redisSessioner) Add(ctx context.Context, clientid string, patterns ...s
 	keys := make([]interface{}, 0)
 	for i := 0; i < len(patterns); i++ {
 		keys = append(keys, patterns[i])
-		if err := m.client.SAdd(ctx, m.toRedisKey(m.conf.topicPrefix, patterns[i]), clientid).Err(); err != nil {
+		if err := m.client.SAdd(ctx, m.toRedisKey(TopicKeyType, patterns[i]), clientid).Err(); err != nil {
 			return err
 		}
 	}
-	err := m.client.SAdd(ctx, m.toRedisKey(m.conf.clientPrefix, clientid), keys...).Err()
+	err := m.client.SAdd(ctx, m.toRedisKey(ClientKeyType, clientid), keys...).Err()
 	if err != nil {
 		return err
 	}
@@ -94,46 +104,30 @@ func (m *redisSessioner) Remove(ctx context.Context, clientid string, patterns .
 	keys := make([]interface{}, 0)
 	for i := 0; i < len(patterns); i++ {
 		keys = append(keys, patterns[i])
-		if err := m.client.SRem(ctx, m.toRedisKey(m.conf.topicPrefix, patterns[i]), clientid).Err(); err != nil {
+		if err := m.client.SRem(ctx, m.toRedisKey(TopicKeyType, patterns[i]), clientid).Err(); err != nil {
 			return err
 		}
 	}
-	err := m.client.SRem(ctx, m.toRedisKey(m.conf.clientPrefix, clientid), keys...).Err()
+	err := m.client.SRem(ctx, m.toRedisKey(ClientKeyType, clientid), keys...).Err()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 func (m *redisSessioner) Match(ctx context.Context, topic string) ([]string, error) {
-	// patterns, err := m.Patterns(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// matched := make([]string, 0)
-	// for i := 0; i < len(patterns); i++ {
-	// 	if face.MatchTopic(patterns[i], topic) == nil {
-	// 		matched = append(matched, patterns[i])
-	// 	}
-	// }
-	// lists := set.New(set.NonThreadSafe)
-	// for i := 0; i < len(matched); i++ {
-	// 	clis := m.getClients(matched[i])
-	// 	lists.Merge(clis)
-	// }
-	// keys := make([]string, 0)
-	// for _, v := range lists.List() {
-	// 	keys = append(keys, v.(string))
-	// }
-	// return keys, nil
-	// return nil, nil
-	r := m.client.Keys(ctx, m.conf.topicPrefix+"/*")
+	redisPatternKey, err := m.buildRedisSearchPattern(topic)
+	log.Println("search", redisPatternKey)
+	if err != nil {
+		return nil, err
+	}
+	r := m.client.Keys(ctx, redisPatternKey)
 	if r.Err() != nil {
 		return nil, r.Err()
 	}
 	patterns := r.Val()
 	matched := make([]string, 0)
 	for i := 0; i < len(patterns); i++ {
-		if face.MatchTopic(m.toTopic(m.conf.topicPrefix, patterns[i]), topic) == nil {
+		if face.MatchTopic(m.toTopic(patterns[i]), topic) == nil {
 			matched = append(matched, patterns[i])
 		}
 	}
@@ -157,29 +151,72 @@ func (m *redisSessioner) Match(ctx context.Context, topic string) ([]string, err
 	return keys, nil
 }
 func (m *redisSessioner) Clear(ctx context.Context, clientid string) error {
-	r := m.client.SMembers(ctx, m.toRedisKey(m.conf.clientPrefix, clientid))
+	r := m.client.SMembers(ctx, m.toRedisKey(ClientKeyType, clientid))
 	if r.Err() != nil {
 		return r.Err()
 	}
 	patterns := r.Val()
 	for i := 0; i < len(patterns); i++ {
-		if err := m.client.SRem(ctx, m.toRedisKey(m.conf.topicPrefix, patterns[i]), clientid).Err(); err != nil {
+		if err := m.client.SRem(ctx, m.toRedisKey(TopicKeyType, patterns[i]), clientid).Err(); err != nil {
 			return err
 		}
 	}
-	return m.client.Del(ctx, m.toRedisKey(m.conf.clientPrefix, clientid)).Err()
+	return m.client.Del(ctx, m.toRedisKey(ClientKeyType, clientid)).Err()
 }
 
-func (m *redisSessioner) toRedisKey(prefix, topic string) string {
+func (m *redisSessioner) getTopicPrefix(topic string) string {
+	if face.IsPrivateTopic(topic) {
+		return m.conf.priTopicPrefix
+	}
+	return m.conf.pubTopicPrefix
+}
+
+func (m *redisSessioner) toRedisKey(tp keyType, topic string) string {
+	prefix := ""
+	if tp == TopicKeyType {
+		prefix = m.getTopicPrefix(topic)
+	} else {
+		prefix = m.conf.clientPrefix
+	}
+
 	if strings.HasPrefix(topic, prefix+"/") {
 		return topic
 	}
 	return prefix + "/" + topic
 }
 
-func (m *redisSessioner) toTopic(prefix, key string) string {
-	if strings.HasPrefix(key, prefix+"/") {
-		return strings.TrimPrefix(key, prefix+"/")
+func (m *redisSessioner) toTopic(key string) string {
+	prefixs := []string{m.conf.pubTopicPrefix, m.conf.priTopicPrefix, m.conf.clientPrefix}
+	for i := 0; i < len(prefixs); i++ {
+		prefix := prefixs[i]
+		if strings.HasPrefix(key, prefix+"/") {
+			return strings.TrimPrefix(key, prefix+"/")
+		}
 	}
 	return key
+}
+
+func (m *redisSessioner) buildRedisSearchPattern(topic string) (string, error) {
+	// prefix := m.getTopicPrefix(topic)
+	topicspec := strings.Split(topic, "/")
+
+	redisPatternKey := ""
+	if face.IsPrivateTopic(topicspec[0]) {
+		if len(topicspec) < 3 {
+			return "", fmt.Errorf("$usr,$cid topic should have topic  $usr/parame/topic")
+		}
+		redisPatternKey = m.conf.priTopicPrefix + "/" + topicspec[0] + "/" + topicspec[1] + "/*"
+	} else {
+		redisPatternKey = m.conf.pubTopicPrefix + "/*"
+	}
+	return redisPatternKey, nil
+}
+
+func (m *redisSessioner) ClientPatterns(ctx context.Context, cliendid string) ([]string, error) {
+	// log.Println("c", m.conf.clientPrefix+"/"+cliendid+"/*")
+	r := m.client.SMembers(ctx, m.conf.clientPrefix+"/"+cliendid)
+	if r.Err() != nil {
+		return nil, r.Err()
+	}
+	return r.Val(), nil
 }

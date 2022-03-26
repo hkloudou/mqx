@@ -7,4 +7,5 @@ type Session interface {
 	Remove(ctx context.Context, clientid string, patterns ...string) error
 	Clear(ctx context.Context, cliendid string) error
 	Match(ctx context.Context, topic string) ([]string, error)
+	ClientPatterns(ctx context.Context, cliendid string) ([]string, error)
 }

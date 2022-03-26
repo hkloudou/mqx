@@ -267,28 +267,13 @@ func (m *redisAuther) expiredBeforeConnection(req *face.AuthRequest, maxTokens u
 }
 
 func (m *redisAuther) MotionExpired(fc func(userName, clientId string) error) error {
-	for {
-		err := m.motionExpired(fc)
-		if err != nil {
-			log.Println(err)
-		}
-		time.Sleep(1 * time.Second)
-	}
-}
-
-func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (reerr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			reerr = fmt.Errorf("%v", r)
-		}
-	}()
 	if err := m.client.ConfigSet(context.TODO(), "notify-keyspace-events", "$Kxeg").Err(); err != nil {
 		return err
 	}
 	//"+m.opts.prefix+".*"
 	str := fmt.Sprintf("__keyspace@%d__:"+m.conf.prefix+"/*", m.client.Options().DB)
 
-	// log.Println("motion", str)
+	log.Println("motion", str)
 	pubsub := m.client.PSubscribe(context.TODO(),
 		str,
 	)
@@ -302,7 +287,7 @@ func (m *redisAuther) motionExpired(fc func(userName, clientId string) error) (r
 		if string(data.Payload) == "set" || string(data.Payload) == "del" || string(data.Payload) == "expired" || string(data.Payload) == "evict" {
 			go func() {
 				for i := 0; i < 10; i++ {
-					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.conf.prefix+".", m.client.Options().DB))
+					remain := strings.TrimPrefix(data.Channel, fmt.Sprintf("__keyspace@%d__:"+m.conf.prefix+"/", m.client.Options().DB))
 					// println("remain", remain)
 					arr := strings.Split(remain, "/")
 					if len(arr) != 2 {

@@ -2,6 +2,7 @@ package face
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -53,34 +54,6 @@ func ValidatePattern(pattern string) error {
 		}
 	}
 	return nil
-	// Skip char check
-	// levels := strings.Split(pattern, "/")
-	// for i, level := range levels {
-	// 	if level == "" {
-	// 		return ErrInvalidTopicFormat
-	// 	}
-	// 	if i == 0 && len(levels) > 1 {
-	// 		if level == "$SYS" || level == "$USR" || level == "$CID" {
-	// 			continue
-	// 		}
-	// 	}
-	// 	if level == "+" {
-	// 		continue
-	// 	}
-	// 	if level == "#" {
-	// 		if i != len(levels)-1 {
-	// 			return ErrInvalidTopicFormat
-	// 		}
-	// 		continue
-	// 	}
-	// 	match, err := regexp.MatchString(_topicLevelExp, level)
-	// 	if err != nil {
-	// 		return err
-	// 	} else if !match {
-	// 		return ErrInvalidTopicFormat
-	// 	}
-	// }
-	// return nil
 }
 
 func ValidateTopic(topic string) error {
@@ -88,27 +61,6 @@ func ValidateTopic(topic string) error {
 		return ErrInvalidPatterunTopic
 	}
 	return ValidatePattern(topic)
-	// if strings.HasPrefix(topic, "/") || strings.HasSuffix(topic, "/") {
-	// 	return ErrInvalidTopicFormat
-	// }
-	// levels := strings.Split(topic, "/")
-	// for i, level := range levels {
-	// 	if level == "" {
-	// 		return ErrInvalidTopicFormat
-	// 	}
-	// 	if i == 0 && len(levels) > 1 {
-	// 		if level == "$SYS" || level == "$USR" || level == "$CID" {
-	// 			continue
-	// 		}
-	// 	}
-	// 	match, err := regexp.MatchString(_topicLevelExp, level)
-	// 	if err != nil {
-	// 		return err
-	// 	} else if !match {
-	// 		return ErrInvalidTopicFormat
-	// 	}
-	// }
-	// return nil
 }
 
 func MatchTopic(pattern, topic string) error {
@@ -131,14 +83,14 @@ func MatchTopic(pattern, topic string) error {
 			return errors.New("not match")
 		}
 	}
-	// regStr := "^" + pattern
-	// if !strings.HasSuffix(pattern, "#") {
-	// 	regStr += "$"
-	// }
-	// regStr = strings.ReplaceAll(regStr, "#", "")
-	// regStr = strings.ReplaceAll(regStr, "+", "[0-9a-zA-Z_.:-]+")
-	// if matched, _ := regexp.MatchString(regStr, topic); matched {
-	// 	return true
-	// }
 	return nil
+}
+
+func IsPrivateTopic(topic string) bool {
+	// send message to user or send msg to cid
+	return strings.HasPrefix(topic, "$usr") || strings.HasPrefix(topic, "$cid")
+}
+
+func MatchPrivateTopic(topic string, group, parame string) bool {
+	return strings.HasPrefix(topic, fmt.Sprintf("%s/%s/", group, parame))
 }

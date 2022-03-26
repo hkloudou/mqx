@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/hkloudou/mqx/face"
 	_ "github.com/hkloudou/mqx/plugins/auth/memory"
@@ -37,6 +39,22 @@ func main() {
 		println(xcolor.Red(fmt.Sprintf("%v", err)))
 		return
 	}
+	log.Println("pls login")
+	_auther.Update(context.TODO(), &face.AuthRequest{
+		UserName: "a",
+		PassWord: "a",
+		ClientId: "a",
+	})
+	// go func() {
+	// 	log.Println("ready update")
+	// 	time.Sleep(10 * time.Second)
+	// 	log.Println("go")
+	// 	_auther.Update(context.TODO(), &face.AuthRequest{
+	// 		UserName: "a",
+	// 		PassWord: "a",
+	// 		ClientId: "b",
+	// 	})
+	// }()
 	xruntime.PrintInfo()
 	println()
 	println(xcolor.Green(tran.String() + " listen on [" + l.Addr() + "]"))

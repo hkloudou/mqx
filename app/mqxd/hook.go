@@ -16,12 +16,22 @@ const _keyFirstConnPacket = "status.firstpacket"
 const _keyConnected = "status.connected"
 
 func newHook(aurher face.Auth, retainer face.Retain, session face.Session) face.Hook {
-	return &defaultHook{
+	tmp := &defaultHook{
 		_auther:   aurher,
 		_retainer: retainer,
 		_session:  session,
 		conns:     sync.Map{},
 	}
+	// kick connect
+	go func() {
+		tmp._auther.MotionExpired(func(userName, clientId string) error {
+			if actur, found := tmp.conns.Load(clientId); found {
+				return actur.(xtransport.Socket).Close()
+			}
+			return nil
+		})
+	}()
+	return tmp
 }
 
 type defaultHook struct {
@@ -125,6 +135,7 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket
 	// TODO: ACL interface
 	// TODO: retainer store
 	// TODO: qos:2
+	log.Println("publish", p.String())
 	if p.Qos == 1 {
 		res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
 		res.MessageID = p.MessageID
@@ -140,21 +151,33 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket
 			return
 		}
 	}
+
 	// TODO: publish data to client and other node(include zero byte payload packet)
 	clients, err := m._session.Match(context.TODO(), p.TopicName)
 	if err != nil {
 		return
 	}
+	log.Println("match", clients)
 	for i := 0; i < len(clients); i++ {
 		go func(i2 int) {
 			if _s, found := m.conns.Load(clients[i2]); found && _s != nil {
+				// match second times
+				if face.IsPrivateTopic(p.TopicName) {
+					// retain private topic
+					if !face.MatchPrivateTopic(p.TopicName, "$uid", _s.(xtransport.Socket).Session().GetString("auth.clientid")) &&
+						!face.MatchPrivateTopic(p.TopicName, "$usr", _s.(xtransport.Socket).Session().GetString("auth.username")) {
+						log.Println("un hit topic", p.TopicName)
+						return
+					}
+				}
+				log.Println("try send to", clients[i2])
 				if err2 := _s.(xtransport.Socket).Send(p); err2 != nil {
 					log.Println("err send msg to", clients[i2])
 				}
+				log.Println("sended to", clients[i2])
 			}
 		}(i)
 	}
-	// log.Println("clients", clients)
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
@@ -179,37 +202,23 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 		s.Send(res)
 		return
 	}
-	res.ReturnCodes = make([]byte, len(p.Qoss))
 
 	// TODO: ACL interface
-	// TODO: retainer read
-	retaineds := make([]*mqtt.PublishPacket, 0)
 
-	for i := 0; i < len(p.Topics); i++ {
-		if err := m._session.Add(context.TODO(), s.Session().GetString("auth.clientid"), p.Topics[i]); err != nil {
+	// check retain when subscribe
+	res.ReturnCodes = make([]byte, len(p.Qoss))
+	retaineds, err := m.checkRetain(s, p.Topics)
+	if err != nil {
+		res.ReturnCodes = make([]byte, len(p.Qoss))
+		for i := 0; i < len(res.ReturnCodes); i++ {
 			res.ReturnCodes[i] = 0x80
-		}
-		if m._retainer == nil {
-			log.Println("no retainer define")
-			res.ReturnCodes[i] = 0x80
-			continue
-		}
-		objs, err := m._retainer.Check(context.TODO(), p.Topics[i])
-		if err != nil {
-			println("err", err.Error())
-			res.ReturnCodes[i] = 0x80
-			continue
-		}
-		res.ReturnCodes[i] = 0x00
-		if objs != nil && len(objs) > 0 {
-			retaineds = append(retaineds, objs...)
 		}
 	}
 	s.Send(res)
 	for i := 0; i < len(retaineds); i++ {
-		go func(i2 int) {
-			s.Send(retaineds[i2])
-		}(i)
+		if err := s.Send(retaineds[i]); err != nil {
+			s.Close()
+		}
 	}
 }
 
@@ -237,6 +246,23 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 	s.Session().Set(_keyConnected, true)
 	if req.CleanSession {
 		m._session.Clear(context.TODO(), req.ClientIdentifier)
+	} else {
+		patterns, err := m._session.ClientPatterns(context.TODO(), req.ClientIdentifier)
+		if err != nil {
+			s.Close()
+		}
+
+		// check retain when connected
+		log.Println("check retain when connected", patterns)
+		retaineds, err := m.checkRetain(s, patterns)
+		if err != nil {
+			s.Close()
+		}
+		for i := 0; i < len(retaineds); i++ {
+			if err := s.Send(retaineds[i]); err != nil {
+				s.Close()
+			}
+		}
 	}
 	log.Println(req.ClientIdentifier, ">", "connected")
 }
@@ -247,4 +273,33 @@ func (m *defaultHook) OnClientDisConnected(s xtransport.Socket) {
 	connid := se.GetString("status.connid")
 	m.conns.Delete(connid)
 	log.Println(connid, ">", "disConnected")
+}
+
+func (m *defaultHook) checkRetain(s xtransport.Socket, patterns []string) ([]*mqtt.PublishPacket, error) {
+	retaineds := make([]*mqtt.PublishPacket, 0)
+
+	for i := 0; i < len(patterns); i++ {
+		objs, err := m._retainer.Check(context.TODO(), patterns[i])
+		if err != nil {
+			return nil, err
+		}
+		for i := 0; i < len(objs); i++ {
+			obj := objs[i]
+			if face.IsPrivateTopic(obj.TopicName) {
+				// retain private topic
+				if !face.MatchPrivateTopic(obj.TopicName, "$uid", s.Session().GetString("auth.clientid")) &&
+					!face.MatchPrivateTopic(obj.TopicName, "$usr", s.Session().GetString("auth.username")) {
+					continue
+				}
+			}
+			//retain public message
+			retaineds = append(retaineds, obj)
+		}
+	}
+	// for i := 0; i < len(retaineds); i++ {
+	// 	if err := s.Send(retaineds[i]); err != nil {
+	// 		return err
+	// 	}
+	// }
+	return retaineds, nil
 }

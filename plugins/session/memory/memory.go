@@ -53,6 +53,10 @@ func (m *memoryRession) Add(ctx context.Context, clientid string, patterns ...st
 	return nil
 }
 
+func (m *memoryRession) ClientPatterns(ctx context.Context, cliendid string) ([]string, error) {
+	return nil, nil
+}
+
 func (m *memoryRession) Remove(ctx context.Context, clientid string, patterns ...string) error {
 	tmp := m.getTopics(clientid)
 	for _, topic := range patterns {
@@ -102,11 +106,3 @@ func (m *memoryRession) Match(ctx context.Context, topic string) ([]string, erro
 	}
 	return keys, nil
 }
-
-// func (m *memoryRession) List(ctx context.Context, pattern string) ([]string, error) {
-// 	ids := make([]string, 0)
-// 	// for _, v := range m.getClients(pattern).List() {
-// 	// 	ids = append(ids, v.(string))
-// 	// }
-// 	return ids, nil
-// }
