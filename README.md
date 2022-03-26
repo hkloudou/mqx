@@ -8,7 +8,7 @@
 - [x] session interface
 - [x] acl interface
 ## acl privider
-- [x] memory `default` github.com/hkloudou/mqx/plugins/acl/memory
+- [x] memory `default` https://github.com/hkloudou/mqx/plugins/acl/memory
 ## auth provider
 > Authentication is an important part of most applications. MQTT protocol supports username/password authentication. Enabling authentication can effectively prevent illegal client connections.
 - [x] memory `default` https://github.com/hkloudou/mqx/tree/main/plugins/auth/memory
