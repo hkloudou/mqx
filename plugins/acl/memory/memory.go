@@ -40,13 +40,15 @@ func init() {
 }
 
 func match(s xtransport.Socket, arr []model, topic string, matched bool) bool {
-	userName := s.Session().GetString("auth.username")
-	clientId := s.Session().GetString("auth.clientid")
-	ip := net.ParseIP(strings.Split(s.Remote(), ":")[0])
+	// userName := s.Session().GetString("auth.username")
+	// clientId := s.Session().GetString("auth.clientid")
+	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	// ip := net.ParseIP(strings.Split(s.Remote(), ":")[0])
+
 	for i := 0; i < len(arr); i++ {
 		item := arr[i]
 		// match user
-		if item.User != "" && item.User != userName {
+		if item.User != "" && item.User != meta.UserName {
 			// println("not match rule:user", item.User, "my", userName)
 			continue
 		}
@@ -57,8 +59,8 @@ func match(s xtransport.Socket, arr []model, topic string, matched bool) bool {
 				println("not match rule:cidr err", err)
 				continue
 			}
-			if !_mask.Contains(ip) {
-				println("not match rule:cidr", item.Cidr, "ip", ip.String(), s.Remote())
+			if !_mask.Contains(meta.ClientIP) {
+				println("not match rule:cidr", item.Cidr, "ip", meta.ClientIP.String(), s.Remote())
 				continue
 			}
 		}
@@ -69,8 +71,8 @@ func match(s xtransport.Socket, arr []model, topic string, matched bool) bool {
 		for i := 0; i < len(item.Patterns); i++ {
 			// println("ready", matched, item.Patterns[i], topic)
 			pr := item.Patterns[i]
-			pr = strings.ReplaceAll(pr, "<username>", userName)
-			pr = strings.ReplaceAll(pr, "<clientid>", clientId)
+			pr = strings.ReplaceAll(pr, "<username>", meta.UserName)
+			pr = strings.ReplaceAll(pr, "<clientid>", meta.ClientIdentifier)
 			if matched {
 				if err := face.MatchTopic(pr, topic); err == nil {
 					// log.Println("matched rule", item.Patterns, topic)

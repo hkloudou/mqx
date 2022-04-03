@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,8 +34,19 @@ func loadPlugin() {
 	// key := _conf.MustString("auth", "plugin", "")
 }
 
-func addTransport(l xtransport.Listener) {
+func addTransport(protocol string, l xtransport.Listener) {
 	if err := l.Accept(func(sock xtransport.Socket) {
+		port, _ := strconv.ParseUint(strings.Split(sock.Remote()+":0", ":")[1], 10, 16)
+		meta := &face.MetaInfo{
+			Protocol:        protocol,
+			ClientIP:        net.ParseIP(strings.Split(sock.Remote(), ":")[0]),
+			ClientPort:      uint16(port),
+			Connected:       false,
+			ConnectionState: sock.ConnectionState(),
+		}
+		sock.Session().Set("meta", meta)
+		sock.SetTimeOut(time.Second * 5)
+		//fitst packet must be arrive in 5 seconds
 		defer func() {
 			if r := recover(); r != nil {
 				log.Println(xcolor.Red(fmt.Sprintf("accept panic%v", r)))
@@ -46,7 +60,7 @@ func addTransport(l xtransport.Listener) {
 				return i, err
 			})
 			if err != nil {
-				println(xcolor.Red(err.Error()))
+				// println(xcolor.Red(err.Error()))
 				return
 			}
 			if request == nil {
@@ -75,7 +89,7 @@ func addTransport(l xtransport.Listener) {
 					_hook.OnClientPublish(sock, request.(*mqtt.PublishPacket))
 					break
 				default:
-					// return nil, fmt.Errorf("not support packet type:%d", data.Type())
+					log.Println(fmt.Errorf("not support packet type:%d", request.Type()))
 				}
 			default:
 				return
@@ -114,7 +128,7 @@ func main() {
 				return
 			}
 			log.Println(xcolor.Green("tcp listen on"), xcolor.Green(fmt.Sprintf(":%d", port)))
-			addTransport(l)
+			addTransport("tcp", l)
 		}
 	}, &wg, false, 1*time.Second)
 	xruntime.GoUnterminated(func() {
@@ -133,7 +147,7 @@ func main() {
 				return
 			}
 			log.Println(xcolor.Green("tls listen on"), xcolor.Green(fmt.Sprintf(":%d", port)))
-			addTransport(l)
+			addTransport("tls", l)
 		}
 	}, &wg, false, 1*time.Second)
 	xruntime.GoUnterminated(func() {
@@ -147,7 +161,7 @@ func main() {
 				return
 			}
 			log.Println(xcolor.Green("ws listen on"), xcolor.Green(fmt.Sprintf(":%d", port)))
-			addTransport(l)
+			addTransport("ws", l)
 		}
 	}, &wg, false, 1*time.Second)
 	xruntime.GoUnterminated(func() {
@@ -166,7 +180,7 @@ func main() {
 				return
 			}
 			log.Println(xcolor.Green("wss listen on"), xcolor.Green(fmt.Sprintf(":%d", port)))
-			addTransport(l)
+			addTransport("wss", l)
 		}
 	}, &wg, false, 1*time.Second)
 	wg.Wait()

@@ -3,29 +3,32 @@ package main
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/hkloudou/mqx/face"
+	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xtransport"
 	"github.com/hkloudou/xtransport/packets/mqtt"
 )
 
-const _keyFirstConnPacket = "status.firstpacket"
-const _keyConnected = "status.connected"
+// const _keyFirstConnPacket = "status.firstpacket"
 
-func newHook(aurher face.Auth, retainer face.Retain, session face.Session, acl face.Acl) face.Hook {
+// const _keyConnected = "status.connected"
+
+func newHook(aurh face.Auth, retain face.Retain, session face.Session, acl face.Acl) face.Hook {
 	tmp := &defaultHook{
-		_auther:   aurher,
-		_retainer: retainer,
-		_session:  session,
-		_acl:      acl,
-		conns:     sync.Map{},
+		_auth:    aurh,
+		_retain:  retain,
+		_session: session,
+		_acl:     acl,
+		conns:    sync.Map{},
 	}
 	// kick connect
 	go func() {
-		tmp._auther.MotionExpired(func(userName, clientId string) error {
+		tmp._auth.MotionExpired(func(userName, clientId string) error {
 			if actur, found := tmp.conns.Load(clientId); found {
 				return actur.(xtransport.Socket).Close()
 			}
@@ -36,8 +39,8 @@ func newHook(aurher face.Auth, retainer face.Retain, session face.Session, acl f
 }
 
 type defaultHook struct {
-	_auther    face.Auth
-	_retainer  face.Retain
+	_auth      face.Auth
+	_retain    face.Retain
 	_session   face.Session
 	_acl       face.Acl
 	conns      sync.Map
@@ -51,11 +54,11 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket
 	// After a Network Connection is established by a Client to a Server, the first Packet sent from the Client to the Server MUST be a CONNECT Packet [MQTT-3.1.0-1].
 	// A Client can only send the CONNECT Packet once over a Network Connection. The Server MUST process a second CONNECT Packet sent from a Client as a protocol violation and disconnect the Client [MQTT-3.1.0-2].  See section 4.8 for information about handling errors.
 	// The payload contains one or more encoded fields. They specify a unique Client identifier for the Client, a Will topic, Will Message, User Name and Password. All but the Client identifier are optional and their presence is determined based on flags in the variable header.
-	if s.Session().GetBool(_keyFirstConnPacket) {
+	if s.Session().GetBool("status.firstpacket") {
 		s.Close()
 		return
 	}
-	s.Session().Set(_keyFirstConnPacket, true)
+	s.Session().Set("status.firstpacket", true)
 	/* The Keep Alive is a time interval measured in seconds. Expressed as a 16-bit word, it is the maximum time interval that is permitted to elapse between the point at which the Client finishes transmitting one Control Packet and the point it starts sending the next. It is the responsibility of the Client to ensure that the interval between Control Packets being sent does not exceed the Keep Alive value. In the absence of sending any other Control Packets, the Client MUST send a PINGREQ Packet [MQTT-3.1.2-23].
 	   The Client can send PINGREQ at any time, irrespective of the Keep Alive value, and use the PINGRESP to determine that the network and the Server are working.
 	   If the Keep Alive value is non-zero and the Server does not receive a Control Packet from the Client within one and a half times the Keep Alive time period, it MUST disconnect the Network Connection to the Client as if the network had failed [MQTT-3.1.2-24].
@@ -84,7 +87,7 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket
 		return
 	}
 	// deny all connection if no auth plugin provided
-	if m._auther == nil {
+	if m._auth == nil {
 		res.ReturnCode = mqtt.ErrRefusedServerUnavailable
 		m.OnClientConnack(s, p, res)
 		return
@@ -115,7 +118,7 @@ func (m *defaultHook) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket
 	}
 
 	_readTls()
-	res.ReturnCode = m._auther.Check(context.TODO(), req)
+	res.ReturnCode = m._auth.Check(context.TODO(), req)
 	m.OnClientConnack(s, p, res)
 }
 
@@ -130,15 +133,23 @@ func (m *defaultHook) OnClientConnack(s xtransport.Socket, req *mqtt.ConnectPack
 }
 
 func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
-	if !s.Session().GetBool(_keyConnected) {
+	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	if !meta.Connected {
+		log.Println("not connected")
 		s.Close()
 		return
 	}
 	if err := face.ValidateTopic(p.TopicName); err != nil {
+		log.Println("valid topic", p.TopicName, err)
 		return
 	}
 	// ACL interface
-	if enable, err := m._acl.Publish(s, p.Qos, p.Retain, p.TopicName); err != nil || !enable {
+	if enable, err := m._acl.Publish(s, p.Qos, p.Retain, p.TopicName); err != nil {
+		log.Println("acl", err)
+		s.Close()
+		return
+	} else if !enable {
+		log.Println("enable", p.TopicName, enable)
 		s.Close()
 		return
 	}
@@ -146,10 +157,10 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket
 	// retainer store
 	// TODO: qos:2
 	if p.Retain {
-		if m._retainer == nil {
+		if m._retain == nil {
 			return
 		}
-		if err := m._retainer.Store(context.TODO(), p); err != nil {
+		if err := m._retain.Store(context.TODO(), p); err != nil {
 			log.Println(err)
 			return
 		}
@@ -192,7 +203,8 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket
 }
 
 func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
-	if !s.Session().GetBool(_keyConnected) {
+	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	if !meta.Connected {
 		s.Close()
 		return
 	}
@@ -235,7 +247,7 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 		retaineds, err = m.checkRetain(s, p.Topics)
 	}
 	if err == nil {
-		err = m._session.Add(context.Background(), s.Session().GetString("auth.clientid"), p.Topics...)
+		err = m._session.Add(context.Background(), meta.ClientIdentifier, p.Topics...)
 	}
 	if err != nil || !enable {
 		res.ReturnCodes = make([]byte, len(p.Qoss))
@@ -257,14 +269,15 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 }
 
 func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket) {
-	if !s.Session().GetBool(_keyConnected) {
+	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	if !meta.Connected {
 		s.Close()
 		return
 	}
 
 	res := mqtt.NewControlPacket(mqtt.Unsuback).(*mqtt.UnsubackPacket)
 	res.MessageID = p.MessageID
-	if err := m._session.Remove(context.TODO(), s.Session().GetString("auth.clientid"), p.Topics...); err != nil {
+	if err := m._session.Remove(context.TODO(), meta.ClientIdentifier, p.Topics...); err != nil {
 		log.Println("un suberr", err.Error())
 	}
 	s.Send(res)
@@ -272,12 +285,12 @@ func (m *defaultHook) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.Unsubscrib
 
 func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
 	// connid := uuid.New().String()
-	s.Session().Set("status.connid", req.ClientIdentifier)
-	s.Session().Set("auth.username", req.Username)
-	s.Session().Set("auth.clientid", req.ClientIdentifier)
+	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	meta.UserName = req.Username
+	meta.ClientIdentifier = req.ClientIdentifier
+	meta.Connected = true
 	m.conns.Store(req.ClientIdentifier, s)
-
-	s.Session().Set(_keyConnected, true)
+	fmt.Println(xcolor.Green("connected   "), meta.Stirng())
 	if req.CleanSession {
 		m._session.Clear(context.TODO(), req.ClientIdentifier)
 	} else {
@@ -285,10 +298,8 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 		if err != nil {
 			s.Close()
 		}
-		log.Println("patterns", patterns)
 		// check retain on connected
 		retaineds, err := m.checkRetain(s, patterns)
-		log.Println("retaineds", len(retaineds))
 		if err != nil {
 			s.Close()
 		}
@@ -298,44 +309,31 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 			}
 		}
 	}
-	log.Println(req.ClientIdentifier, ">", "connected")
 }
 
 func (m *defaultHook) OnClientDisConnected(s xtransport.Socket) {
-	s.Session().Set(_keyConnected, false)
-	se := s.Session()
-	connid := se.GetString("status.connid")
-	m.conns.Delete(connid)
-	log.Println(connid, ">", "disConnected")
+	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	meta.Connected = false
+	m.conns.Delete(meta.ClientIdentifier)
+	// log.Println(meta.ClientIdentifier, ">", "disConnected")
+	// fmt.Println(xcolor.Green("connected"), meta.Stirng())
+	fmt.Println(xcolor.Red("disconnected"), meta.Stirng())
+	// disConnected
 }
 
 func (m *defaultHook) checkRetain(s xtransport.Socket, patterns []string) ([]*mqtt.PublishPacket, error) {
 	retaineds := make([]*mqtt.PublishPacket, 0)
-
 	for i := 0; i < len(patterns); i++ {
-		objs, err := m._retainer.Check(context.TODO(), patterns[i])
+		objs, err := m._retain.Check(context.TODO(), patterns[i])
 		if err != nil {
 			return nil, err
 		}
 		for i := 0; i < len(objs); i++ {
 			obj := objs[i]
-			// if face.IsPrivateTopic(obj.TopicName) {
-			// 	// retain private topic
-			// 	if !face.MatchPrivateTopic(obj.TopicName, "$uid", s.Session().GetString("auth.clientid")) &&
-			// 		!face.MatchPrivateTopic(obj.TopicName, "$usr", s.Session().GetString("auth.username")) {
-			// 		continue
-			// 	}
-			// }
-			if b, err := m._acl.Publish(s, 0, false, obj.TopicName); err == nil && b {
+			if b, err := m._acl.Subcribe(s, 0, false, obj.TopicName); err == nil && b {
 				retaineds = append(retaineds, obj)
 			}
-			//retain public message
 		}
 	}
-	// for i := 0; i < len(retaineds); i++ {
-	// 	if err := s.Send(retaineds[i]); err != nil {
-	// 		return err
-	// 	}
-	// }
 	return retaineds, nil
 }
