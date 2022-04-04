@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"strings"
@@ -113,10 +112,6 @@ func New(conf face.Conf) (face.Acl, error) {
 	obj.model.PubDeny = loopRead("acl.plugin.memory.pub.deny.%d")
 	obj.model.SubAllow = loopRead("acl.plugin.memory.sub.allow.%d")
 	obj.model.SubDeny = loopRead("acl.plugin.memory.sub.deny.%d")
-
-	// log.Println(len(obj.model))
-	// b, _ := json.Marshal(obj.model)
-	// log.Println(string(b))
 	return obj, nil
 }
 
@@ -124,21 +119,21 @@ type memoryAcl struct {
 	model Models
 }
 
-func (m *memoryAcl) Subcribe(ctx context.Context, meta *face.MetaInfo, pattern string) (bool, error) {
+func (m *memoryAcl) GetSub(meta *face.MetaInfo, pattern string) face.AclCode {
 	if !match(meta, m.model.SubAllow, pattern, true) {
-		return false, nil
+		return face.AclCodeDeny
 	}
 	if match(meta, m.model.SubDeny, pattern, true) {
-		return false, nil
+		return face.AclCodeDeny
 	}
-	return true, nil
+	return face.AclCodeAllow
 }
-func (m *memoryAcl) Publish(ctx context.Context, meta *face.MetaInfo, pattern string) (bool, error) {
-	if !match(meta, m.model.PubAllow, pattern, true) {
-		return false, nil
+func (m *memoryAcl) GetPub(meta *face.MetaInfo, topic string) face.AclCode {
+	if !match(meta, m.model.PubAllow, topic, true) {
+		return face.AclCodeDeny
 	}
-	if match(meta, m.model.PubDeny, pattern, true) {
-		return false, nil
+	if match(meta, m.model.PubDeny, topic, true) {
+		return face.AclCodeDeny
 	}
-	return true, nil
+	return face.AclCodeAllow
 }
