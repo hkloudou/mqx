@@ -144,7 +144,7 @@ func (m *defaultHook) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket
 		return
 	}
 	// ACL interface
-	if enable, err := m._acl.Publish(s, p.Qos, p.Retain, p.TopicName); err != nil {
+	if enable, err := m._acl.Publish(context.TODO(), meta, p.TopicName); err != nil {
 		log.Println("acl", err)
 		s.Close()
 		return
@@ -233,7 +233,7 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 	var err error
 	var retaineds []*mqtt.PublishPacket
 	for i := 0; i < len(p.Qoss); i++ {
-		enable, err = m._acl.Subcribe(s, p.Qoss[i], p.Retain, p.Topics[i])
+		enable, err = m._acl.Subcribe(context.TODO(), meta, p.Topics[i])
 		if err != nil {
 			break
 		}
@@ -244,7 +244,7 @@ func (m *defaultHook) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePac
 
 	// check retain on subscribe
 	if err == nil {
-		retaineds, err = m.checkRetain(s, p.Topics)
+		retaineds, err = m.checkRetain(meta, p.Topics)
 	}
 	if err == nil {
 		err = m._session.Add(context.Background(), meta.ClientIdentifier, p.Topics...)
@@ -299,7 +299,7 @@ func (m *defaultHook) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPa
 			s.Close()
 		}
 		// check retain on connected
-		retaineds, err := m.checkRetain(s, patterns)
+		retaineds, err := m.checkRetain(meta, patterns)
 		if err != nil {
 			s.Close()
 		}
@@ -321,7 +321,7 @@ func (m *defaultHook) OnClientDisConnected(s xtransport.Socket) {
 	// disConnected
 }
 
-func (m *defaultHook) checkRetain(s xtransport.Socket, patterns []string) ([]*mqtt.PublishPacket, error) {
+func (m *defaultHook) checkRetain(meta *face.MetaInfo, patterns []string) ([]*mqtt.PublishPacket, error) {
 	retaineds := make([]*mqtt.PublishPacket, 0)
 	for i := 0; i < len(patterns); i++ {
 		objs, err := m._retain.Check(context.TODO(), patterns[i])
@@ -330,7 +330,7 @@ func (m *defaultHook) checkRetain(s xtransport.Socket, patterns []string) ([]*mq
 		}
 		for i := 0; i < len(objs); i++ {
 			obj := objs[i]
-			if b, err := m._acl.Subcribe(s, 0, false, obj.TopicName); err == nil && b {
+			if b, err := m._acl.Subcribe(context.TODO(), meta, obj.TopicName); err == nil && b {
 				retaineds = append(retaineds, obj)
 			}
 		}

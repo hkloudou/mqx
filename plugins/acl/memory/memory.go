@@ -1,12 +1,12 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strings"
 
 	"github.com/hkloudou/mqx/face"
-	"github.com/hkloudou/xtransport"
 )
 
 type model struct {
@@ -22,29 +22,11 @@ type Models struct {
 	SubDeny  []model
 }
 
-// type testPeer struct {
-// 	PublicKey    string
-// 	PresharedKey string
-// 	AllowedIPs   []string `delim:","`
-// }
-
-// type testNonUniqueSectionsStruct struct {
-// 	Interface testInterface
-// 	Peer      []testPeer `ini:",nonunique"`
-// }
-
 func init() {
 	face.RegisterPugin[face.Acl]("memory", MustNew)
-
-	// face.DefaultAuths["redis"] = MustNew
 }
 
-func match(s xtransport.Socket, arr []model, topic string, matched bool) bool {
-	// userName := s.Session().GetString("auth.username")
-	// clientId := s.Session().GetString("auth.clientid")
-	meta := s.Session().MustGet("meta").(*face.MetaInfo)
-	// ip := net.ParseIP(strings.Split(s.Remote(), ":")[0])
-
+func match(meta *face.MetaInfo, arr []model, topic string, matched bool) bool {
 	for i := 0; i < len(arr); i++ {
 		item := arr[i]
 		// match user
@@ -60,7 +42,7 @@ func match(s xtransport.Socket, arr []model, topic string, matched bool) bool {
 				continue
 			}
 			if !_mask.Contains(meta.ClientIP) {
-				println("not match rule:cidr", item.Cidr, "ip", meta.ClientIP.String(), s.Remote())
+				println("not match rule:cidr", item.Cidr, "ip", meta.ClientIP.String(), meta.ClientIP.String())
 				continue
 			}
 		}
@@ -142,20 +124,20 @@ type memoryAcl struct {
 	model Models
 }
 
-func (m *memoryAcl) Subcribe(s xtransport.Socket, qos byte, retain bool, pattern string) (bool, error) {
-	if !match(s, m.model.SubAllow, pattern, true) {
+func (m *memoryAcl) Subcribe(ctx context.Context, meta *face.MetaInfo, pattern string) (bool, error) {
+	if !match(meta, m.model.SubAllow, pattern, true) {
 		return false, nil
 	}
-	if match(s, m.model.SubDeny, pattern, true) {
+	if match(meta, m.model.SubDeny, pattern, true) {
 		return false, nil
 	}
 	return true, nil
 }
-func (m *memoryAcl) Publish(s xtransport.Socket, qos byte, retain bool, pattern string) (bool, error) {
-	if !match(s, m.model.PubAllow, pattern, true) {
+func (m *memoryAcl) Publish(ctx context.Context, meta *face.MetaInfo, pattern string) (bool, error) {
+	if !match(meta, m.model.PubAllow, pattern, true) {
 		return false, nil
 	}
-	if match(s, m.model.PubDeny, pattern, true) {
+	if match(meta, m.model.PubDeny, pattern, true) {
 		return false, nil
 	}
 	return true, nil

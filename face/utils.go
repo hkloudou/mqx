@@ -6,24 +6,8 @@ import (
 	"strings"
 )
 
-// ErrInvalidTopicEmptyString is the error returned when a topic string
-// is passed in that is 0 length
-// var ErrInvalidTopicEmptyString = errors.New("invalid Topic; empty string")
-// var ErrInvalidTopicEmptyLevel = errors.New("invalid Topic; empty level")
-// var ErrInvalidTopicMatchError = errors.New("invalid Topic; not match")
-// var ErrInvalidTopicMultilevel = errors.New("invalid Topic; multi-level wildcard must be last level")
-
 var ErrInvalidPatterunTopic = errors.New("invalid Topic; publish topic should not be pattern")
 var ErrInvalidTopicFormat = errors.New("Invalid topic")
-
-// // ErrInvalidTopicEmptyString is the error returned when a topic string
-// // is passed in that is 0 length
-// var ErrInvalidTopicEmptyString = errors.New("invalid Topic; empty string")
-
-// // ErrInvalidTopicMultilevel is the error returned when a topic string
-// // is passed in that has the multi level wildcard in any position but
-// // the last
-// var ErrInvalidTopicMultilevel = errors.New("invalid Topic; multi-level wildcard must be last level")
 
 // const _topicLevelExp = "^[0-9a-zA-Z_.:-]+$"
 

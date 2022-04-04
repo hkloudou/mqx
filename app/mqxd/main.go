@@ -46,7 +46,8 @@ func addTransport(protocol string, l xtransport.Listener) {
 		}
 		sock.Session().Set("meta", meta)
 		sock.SetTimeOut(time.Second * 5)
-		//fitst packet must be arrive in 5 seconds
+		//fitst packet must be arrive in next 5 seconds
+
 		defer func() {
 			if r := recover(); r != nil {
 				log.Println(xcolor.Red(fmt.Sprintf("accept panic%v", r)))
