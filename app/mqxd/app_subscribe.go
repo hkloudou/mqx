@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xtransport"
@@ -10,16 +9,22 @@ import (
 )
 
 func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
-	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	meta := getMeta(s)
 	if !meta.Connected {
 		s.Close()
 		return
 	}
 
 	// verify request
-	if len(p.Qoss) != len(p.Topics) || len(p.Qoss) == 0 {
+	if err := p.Validate(); err != nil {
 		s.Close()
 		return
+	}
+	if m.cfg.StrictMode {
+		if err := p.StrictValidate(); err != nil {
+			s.Close()
+			return
+		}
 	}
 
 	// check acl
@@ -39,12 +44,14 @@ func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 
 	// store session
 	if err := m._session.Add(context.Background(), meta.ClientIdentifier, accessedTopics...); err != nil {
+		//TODO: system error
 		s.Close()
 		return
 	}
 
 	// check retain on subscribe
 	if retaineds, err := m.checkRetain(meta, accessedTopics); err != nil {
+		//TODO: system error
 		s.Close()
 		return
 	} else {
@@ -57,16 +64,27 @@ func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 }
 
 func (m *app) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket) {
-	meta := s.Session().MustGet("meta").(*face.MetaInfo)
+	meta := getMeta(s)
 	if !meta.Connected {
 		s.Close()
 		return
 	}
 
+	// verify request
+	if err := p.Validate(); err != nil {
+		s.Close()
+		return
+	}
+	if m.cfg.StrictMode {
+		if err := p.StrictValidate(); err != nil {
+			s.Close()
+			return
+		}
+	}
 	res := mqtt.NewControlPacket(mqtt.Unsuback).(*mqtt.UnsubackPacket)
 	res.MessageID = p.MessageID
 	if err := m._session.Remove(context.TODO(), meta.ClientIdentifier, p.Topics...); err != nil {
-		log.Println("un suberr", err.Error())
+		//TODO: system error
 	}
 	s.Send(res)
 }
