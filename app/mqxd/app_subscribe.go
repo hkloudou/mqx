@@ -20,7 +20,7 @@ func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 		s.Close()
 		return
 	}
-	if m.cfg.StrictMode {
+	if mqttConfig.StrictMode {
 		if err := p.StrictValidate(); err != nil {
 			s.Close()
 			return
@@ -75,7 +75,7 @@ func (m *app) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket)
 		s.Close()
 		return
 	}
-	if m.cfg.StrictMode {
+	if mqttConfig.StrictMode {
 		if err := p.StrictValidate(); err != nil {
 			s.Close()
 			return

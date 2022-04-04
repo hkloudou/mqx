@@ -16,7 +16,6 @@ import (
 )
 
 type app struct {
-	cfg        config
 	_cfg       face.Conf
 	_auth      face.Auth
 	_retain    face.Retain

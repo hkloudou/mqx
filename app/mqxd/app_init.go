@@ -26,6 +26,6 @@ func (m *app) init() {
 	m._retain = face.LoadPlugin[face.Retain](m._cfg.MustString("retain", "plugin", "memory"), m._cfg)
 	m._session = face.LoadPlugin[face.Session](m._cfg.MustString("session", "plugin", "memory"), m._cfg)
 	m._acl = face.LoadPlugin[face.Acl](m._cfg.MustString("acl", "plugin", "memory"), m._cfg)
-	m._cfg.MapTo("", &m.cfg)
-	println(m.cfg.String())
+	m._cfg.MapTo("mqtt", &mqttConfig)
+	// println(m.cfg.String())
 }

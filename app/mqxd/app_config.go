@@ -1,11 +1,16 @@
 package main
 
-import "fmt"
+var mqttConfig struct {
 
-type config struct {
+	// mqtt.strict_mode
+	// default: false
 	StrictMode bool
-}
 
-func (m config) String() string {
-	return fmt.Sprintf("strict_mode:%v", m.StrictMode)
+	// mqtt.wildcard_subscription
+	// default: true
+	WildcardSubscription bool
+
+	// mqtt.retain_available
+	// default: true
+	RetainAvailable bool
 }
