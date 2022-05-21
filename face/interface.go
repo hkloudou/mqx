@@ -38,10 +38,6 @@ type Session interface {
 	ClientPatterns(ctx context.Context, cliendid string) ([]string, error)
 }
 
-// type MetricsCounter interface {
-// 	Clear()
-// 	Count() int64
-// 	Dec(int64)
-// 	Inc(int64)
-// 	Snapshot() MetricsCounter
-// }
+type Bridge interface {
+	Motion(cb func(obj *mqtt.PublishPacket))
+}
