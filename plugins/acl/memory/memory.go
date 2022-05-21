@@ -108,10 +108,10 @@ func New(conf face.Conf) (face.Acl, error) {
 		return items
 	}
 
-	obj.model.PubAllow = loopRead("acl.plugin.memory.pub.allow.%d")
-	obj.model.PubDeny = loopRead("acl.plugin.memory.pub.deny.%d")
-	obj.model.SubAllow = loopRead("acl.plugin.memory.sub.allow.%d")
-	obj.model.SubDeny = loopRead("acl.plugin.memory.sub.deny.%d")
+	obj.model.PubAllow = loopRead("acl.plugin.pub.allow.%d")
+	obj.model.PubDeny = loopRead("acl.plugin.pub.deny.%d")
+	obj.model.SubAllow = loopRead("acl.plugin.sub.allow.%d")
+	obj.model.SubDeny = loopRead("acl.plugin.sub.deny.%d")
 	return obj, nil
 }
 

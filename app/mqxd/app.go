@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -94,6 +95,23 @@ func (m *app) run() {
 			log.Println(xcolor.Green("wss listen on"), xcolor.Green(fmt.Sprintf(":%d", port)))
 			m.addTransport("wss", l)
 		}
+	}, &wg, false, 1*time.Second)
+
+	xruntime.GoUnterminated(func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, "hello")
+		})
+		// log.Println("hello")
+		// mux.ServeHTTP()
+		port := 10081
+		log.Println(xcolor.Green("metric listen on"), xcolor.Green(fmt.Sprintf(":%d", port)))
+		err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
+		if err != nil {
+			log.Println(xcolor.Red(fmt.Sprintf("metric listen err:%v", err.Error())))
+			return
+		}
+
 	}, &wg, false, 1*time.Second)
 	wg.Wait()
 }

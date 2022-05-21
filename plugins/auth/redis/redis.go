@@ -110,7 +110,7 @@ func (m *redisAuther) Update(ctx context.Context, req *face.AuthRequest, options
 		   581 "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" [
 	*/
 
-	if b, err := regexp.MatchString(`^[A-Za-z0-9-_]{1,36}$`, req.ClientId); !b || err != nil {
+	if b, err := regexp.MatchString(`^[A-Za-z0-9-_@]{1,36}$`, req.ClientId); !b || err != nil {
 		return face.ErrAuthInvalidClientId
 	}
 	if b, err := regexp.MatchString(`^[A-Za-z0-9-_@]{1,36}$`, req.UserName); !b || err != nil {
