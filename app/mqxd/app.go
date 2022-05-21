@@ -12,6 +12,7 @@ import (
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xlib/xruntime"
 	"github.com/hkloudou/xtransport"
+	"github.com/hkloudou/xtransport/packets/mqtt"
 	transport "github.com/hkloudou/xtransport/transports/tcp"
 	wtransport "github.com/hkloudou/xtransport/transports/ws"
 )
@@ -22,6 +23,7 @@ type app struct {
 	_retain    face.Retain
 	_session   face.Session
 	_acl       face.Acl
+	_bridge    face.Bridge
 	conns      sync.Map
 	topicConns sync.Map
 }
@@ -113,5 +115,13 @@ func (m *app) run() {
 		}
 
 	}, &wg, false, 1*time.Second)
+
+	if err := m._bridge.Motion(func(obj *mqtt.PublishPacket) {
+		m.publish(obj)
+	}); err != nil {
+		log.Println(xcolor.Red(fmt.Sprintf("bridge err:%v", err.Error())))
+		time.Sleep(10 * time.Second)
+		panic("err")
+	}
 	wg.Wait()
 }

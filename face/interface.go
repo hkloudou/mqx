@@ -39,5 +39,5 @@ type Session interface {
 }
 
 type Bridge interface {
-	Motion(cb func(obj *mqtt.PublishPacket))
+	Motion(cb func(obj *mqtt.PublishPacket)) error
 }

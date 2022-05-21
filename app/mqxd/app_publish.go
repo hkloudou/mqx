@@ -27,7 +27,7 @@ func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 		s.Close()
 		return
 	}
-	once := sync.Once{}
+
 	// retainer store
 	// TODO: qos:2
 	if p.Retain {
@@ -39,38 +39,32 @@ func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 			return
 		}
 	}
+	m.publish(p)
+	once := sync.Once{}
+	once.Do(func() {
+		if p.Qos == 1 {
+			res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
+			res.MessageID = p.MessageID
+			res.Qos = p.Qos
+			s.Send(res)
+		}
+	})
+}
 
+func (m *app) publish(p *mqtt.PublishPacket) {
+	log.Println("publish", p)
 	// TODO: publish data to client and other node(include zero byte payload packet)
 	clients, err := m._session.Match(context.TODO(), p.TopicName)
 	if err != nil {
 		return
 	}
-	// log.Println("match", clients)
+	log.Println("match", clients)
 	for i := 0; i < len(clients); i++ {
 		go func(i2 int) {
 			if _s, found := m.conns.Load(clients[i2]); found && _s != nil {
-				// match second times
-				// don;t check again,let acl plugin do this
-				// if face.IsPrivateTopic(p.TopicName) {
-				// 	// retain private topic
-				// 	if !face.MatchPrivateTopic(p.TopicName, "$uid", _s.(xtransport.Socket).Session().GetString("auth.clientid")) &&
-				// 		!face.MatchPrivateTopic(p.TopicName, "$usr", _s.(xtransport.Socket).Session().GetString("auth.username")) {
-				// 		// log.Println("un hit topic", p.TopicName)
-				// 		return
-				// 	}
-				// }
-				// log.Println("try send to", clients[i2])
 				if err2 := _s.(xtransport.Socket).Send(p); err2 != nil {
 					// log.Println("err send msg to", clients[i2])
 				}
-				once.Do(func() {
-					if p.Qos == 1 {
-						res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
-						res.MessageID = p.MessageID
-						res.Qos = p.Qos
-						s.Send(res)
-					}
-				})
 			}
 		}(i)
 	}

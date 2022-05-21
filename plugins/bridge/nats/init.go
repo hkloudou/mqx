@@ -58,6 +58,7 @@ func New(conf face.Conf) (face.Bridge, error) {
 		return items
 	}
 	obj.models = make([]model, 0)
-	obj.models = loopRead("bridge.plugin.motion.%d")
+	obj.models = loopRead("bridge.plugin.nats.motion.%d")
+	// log.Println("obj.models", obj.models)
 	return obj, nil
 }
