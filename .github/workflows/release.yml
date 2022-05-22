@@ -1,0 +1,19 @@
+name: "tagged-release"
+
+on:
+  push:
+    tags:
+      - "main"
+
+jobs:
+  tagged-release:
+    name: "Tagged Release"
+    runs-on: "ubuntu-latest"
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: build
+      run: ../../scripts/gobuild.sh mqxd /mqxd
+      shell: bash
