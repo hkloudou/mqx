@@ -26,6 +26,6 @@ jobs:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         # automatic_release_tag: "latest"
         prerelease: true
-        # title: "Development Build"
+        title: "Development Build"
         files: |
           /home/runner/work/mqx/mqx/build/mqxd_linux_amd64
