@@ -30,15 +30,6 @@ func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 
 	// retainer store
 	// TODO: qos:2
-	if p.Retain {
-		if m._retain == nil {
-			return
-		}
-		if err := m._retain.Store(context.TODO(), p); err != nil {
-			log.Println(err)
-			return
-		}
-	}
 	m.publish(p)
 	once := sync.Once{}
 	once.Do(func() {
@@ -52,13 +43,23 @@ func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 }
 
 func (m *app) publish(p *mqtt.PublishPacket) {
-	log.Println("publish", p)
+	// retain
+	if p.Retain {
+		if m._retain == nil {
+			return
+		}
+		if err := m._retain.Store(context.TODO(), p); err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	// log.Println("publish", p)
 	// TODO: publish data to client and other node(include zero byte payload packet)
 	clients, err := m._session.Match(context.TODO(), p.TopicName)
 	if err != nil {
 		return
 	}
-	log.Println("match", clients)
+	// log.Println("match", clients)
 	for i := 0; i < len(clients); i++ {
 		go func(i2 int) {
 			if _s, found := m.conns.Load(clients[i2]); found && _s != nil {

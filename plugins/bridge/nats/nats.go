@@ -3,6 +3,7 @@ package nats
 import (
 	"encoding/base64"
 	"log"
+	"strings"
 
 	"github.com/hkloudou/xlib/xruntime"
 	"github.com/hkloudou/xtransport/packets/mqtt"
@@ -38,6 +39,13 @@ func (m *natsBridge) motion(key string, stream bool, cb func(obj *mqtt.PublishPa
 	queue := base64.RawURLEncoding.EncodeToString([]byte(xruntime.HostName() + "-mqxbridge"))
 	// os.Hostname()
 	log.Println("queue", queue)
+	readHead := func(pk *mqtt.PublishPacket, msg *nats.Msg) {
+		if strings.ToLower(msg.Header.Get("x-mqtt-retain")) == "true" {
+			pk.Retain = true
+		} else {
+			pk.Retain = false
+		}
+	}
 	if stream {
 		// m.js
 		// log.Println("delete", m.js.)
@@ -46,6 +54,7 @@ func (m *natsBridge) motion(key string, stream bool, cb func(obj *mqtt.PublishPa
 			pk := mqtt.NewControlPacket(mqtt.Publish).(*mqtt.PublishPacket)
 			pk.Payload = msg.Data
 			pk.TopicName = msg.Subject
+			readHead(pk, msg)
 			cb(pk)
 		})
 		return err
@@ -56,6 +65,7 @@ func (m *natsBridge) motion(key string, stream bool, cb func(obj *mqtt.PublishPa
 			pk := mqtt.NewControlPacket(mqtt.Publish).(*mqtt.PublishPacket)
 			pk.Payload = msg.Data
 			pk.TopicName = msg.Subject
+			readHead(pk, msg)
 			cb(pk)
 		})
 	}
