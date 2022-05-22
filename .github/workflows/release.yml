@@ -19,5 +19,13 @@ jobs:
         go-version: '^1.18.2' # The Go version to download (if necessary) and use.
     - run: go version 
     - name: build
-      run: cd /home/runner/work/mqx/mqx/app/mqxd && ../../scripts/gobuild.sh mqxd /mqxd
+      run: cd /home/runner/work/mqx/mqx/app/mqxd && ../../scripts/gobuild.sh mqxd /home/runner/work/mqx/mqx/build/mqxd_linux_amd64
       shell: bash
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        # automatic_release_tag: "latest"
+        prerelease: true
+        # title: "Development Build"
+        files: |
+          /home/runner/work/mqx/mqx/build/mqxd_linux_amd64
