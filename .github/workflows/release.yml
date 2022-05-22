@@ -15,5 +15,5 @@ jobs:
       with:
         fetch-depth: 0
     - name: build
-      run: ../../scripts/gobuild.sh mqxd /mqxd
+      run: cd /home/runner/work/mqx/mqx && ../../scripts/gobuild.sh mqxd /mqxd
       shell: bash
