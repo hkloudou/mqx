@@ -59,7 +59,7 @@ func (m *natsBridge) motion(cb func(obj *mqtt.PublishPacket)) error {
 	queue := base64.RawURLEncoding.EncodeToString([]byte(xruntime.HostName() + "-mqxbridge"))
 	_, err := m.conn.QueueSubscribe(m.cfg.PublishKey, queue, func(msg *nats.Msg) {
 		pk, err := mqtt.ReadPacket(bytes.NewReader(msg.Data))
-		log.Println("da", pk.String())
+		// log.Println("da", pk.String())
 		if err != nil {
 			msg.Respond([]byte(err.Error()))
 			return
@@ -92,7 +92,7 @@ func (m *natsBridge) motionJs(cb func(obj *mqtt.PublishPacket)) error {
 	queue := base64.RawURLEncoding.EncodeToString([]byte(xruntime.HostName() + "-mqxbridge"))
 	_, err := m.st.Js().QueueSubscribe(m.cfg.PublishJetstreamKey, queue, func(msg *nats.Msg) {
 		pk, err := mqtt.ReadPacket(bytes.NewReader(msg.Data))
-		log.Println("JS data arrve", pk.String())
+		// log.Println("JS data arrve", pk.String())
 		if err != nil {
 			msg.Respond([]byte(err.Error()))
 			return
