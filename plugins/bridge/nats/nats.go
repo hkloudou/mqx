@@ -30,12 +30,12 @@ type natsBridge struct {
 }
 
 func (m *natsBridge) Motion(cb func(obj *mqtt.PublishPacket)) error {
-	if err := m.motion(m.cfg.PublishKey, cb); err != nil {
-		return err
-	} else if err := m.motionJs(cb); err != nil {
+	err := m.motion(cb)
+	if err != nil {
 		return err
 	}
-	return nil
+	err = m.motionJs(cb)
+	return err
 }
 
 func (m *natsBridge) Publish(pack *mqtt.PublishPacket) error {
@@ -54,12 +54,12 @@ func (m *natsBridge) Publish(pack *mqtt.PublishPacket) error {
 	return err
 }
 
-func (m *natsBridge) motion(key string, cb func(obj *mqtt.PublishPacket)) error {
-	log.Println("ready motion publish in", key)
+func (m *natsBridge) motion(cb func(obj *mqtt.PublishPacket)) error {
+	log.Println("ready motion publish in", m.cfg.PublishKey)
 	queue := base64.RawURLEncoding.EncodeToString([]byte(xruntime.HostName() + "-mqxbridge"))
-	_, err := m.conn.QueueSubscribe(key, queue, func(msg *nats.Msg) {
+	_, err := m.conn.QueueSubscribe(m.cfg.PublishKey, queue, func(msg *nats.Msg) {
 		pk, err := mqtt.ReadPacket(bytes.NewReader(msg.Data))
-		log.Println("data arrve", pk.String())
+		log.Println("da", pk.String())
 		if err != nil {
 			msg.Respond([]byte(err.Error()))
 			return
@@ -92,7 +92,7 @@ func (m *natsBridge) motionJs(cb func(obj *mqtt.PublishPacket)) error {
 	queue := base64.RawURLEncoding.EncodeToString([]byte(xruntime.HostName() + "-mqxbridge"))
 	_, err := m.st.Js().QueueSubscribe(m.cfg.PublishJetstreamKey, queue, func(msg *nats.Msg) {
 		pk, err := mqtt.ReadPacket(bytes.NewReader(msg.Data))
-		log.Println("js data arrve", pk.String())
+		log.Println("JS data arrve", pk.String())
 		if err != nil {
 			msg.Respond([]byte(err.Error()))
 			return
