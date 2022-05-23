@@ -34,47 +34,47 @@ func New(conf face.Conf) (face.Session, error) {
 	return obj, nil
 }
 
-func (m *memoryRession) getTopics(clientid string) set.Interface {
-	acture, _ := m._clientTopics.LoadOrStore(clientid, set.New(set.ThreadSafe))
+func (m *memoryRession) getTopics(sessionKey string) set.Interface {
+	acture, _ := m._clientTopics.LoadOrStore(sessionKey, set.New(set.ThreadSafe))
 	return acture.(set.Interface)
 }
 
-func (m *memoryRession) getClients(topic string) set.Interface {
+func (m *memoryRession) getSessionIDs(topic string) set.Interface {
 	acture, _ := m._topicClients.LoadOrStore(topic, set.New(set.ThreadSafe))
 	return acture.(set.Interface)
 }
 
-func (m *memoryRession) Add(ctx context.Context, clientid string, patterns ...string) error {
-	tmp := m.getTopics(clientid)
+func (m *memoryRession) Add(ctx context.Context, sessionKey string, patterns ...string) error {
+	tmp := m.getTopics(sessionKey)
 	for _, topic := range patterns {
 		tmp.Add(topic)
-		m.getClients(topic).Add(clientid)
+		m.getSessionIDs(topic).Add(sessionKey)
 	}
 	return nil
 }
 
-func (m *memoryRession) ClientPatterns(ctx context.Context, clientid string) ([]string, error) {
+func (m *memoryRession) ClientPatterns(ctx context.Context, sessionKey string) ([]string, error) {
 	topics := make([]string, 0)
-	tmp := m.getTopics(clientid)
+	tmp := m.getTopics(sessionKey)
 	for _, topic := range tmp.List() {
 		topics = append(topics, topic.(string))
 	}
 	return topics, nil
 }
 
-func (m *memoryRession) Remove(ctx context.Context, clientid string, patterns ...string) error {
-	tmp := m.getTopics(clientid)
+func (m *memoryRession) Remove(ctx context.Context, sessionKey string, patterns ...string) error {
+	tmp := m.getTopics(sessionKey)
 	for _, topic := range patterns {
 		tmp.Remove(topic)
-		m.getClients(topic).Remove(clientid)
+		m.getSessionIDs(topic).Remove(sessionKey)
 	}
 	return nil
 }
 
-func (m *memoryRession) Clear(ctx context.Context, clientid string) error {
-	tmp := m.getTopics(clientid)
+func (m *memoryRession) Clear(ctx context.Context, sessionKey string) error {
+	tmp := m.getTopics(sessionKey)
 	for _, topic := range tmp.List() {
-		m.getClients(topic.(string)).Remove(clientid)
+		m.getSessionIDs(topic.(string)).Remove(sessionKey)
 	}
 	tmp.Clear()
 	return nil
@@ -102,7 +102,7 @@ func (m *memoryRession) Match(ctx context.Context, topic string) ([]string, erro
 	}
 	lists := set.New(set.NonThreadSafe)
 	for i := 0; i < len(matched); i++ {
-		clis := m.getClients(matched[i])
+		clis := m.getSessionIDs(matched[i])
 		lists.Merge(clis)
 	}
 	keys := make([]string, 0)

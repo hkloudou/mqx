@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fatih/set"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xtransport"
@@ -13,6 +14,11 @@ import (
 )
 
 const _maxKeepAlive = (18 * time.Hour) + (12 * time.Minute) + (15 * time.Second)
+
+func (m *app) getSessionConnections(sessionKey string) set.Interface {
+	actual, _ := m.sessionConns.LoadOrStore(sessionKey, set.New(set.ThreadSafe))
+	return actual.(set.Interface)
+}
 
 func (m *app) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket) {
 	// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
@@ -83,7 +89,11 @@ func (m *app) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket) {
 	}
 
 	_readTls()
-	res.ReturnCode = m._auth.Check(context.TODO(), req)
+
+	res.ReturnCode = p.Validate()
+	if res.ReturnCode == mqtt.Accepted {
+		res.ReturnCode = m._auth.Check(context.TODO(), req)
+	}
 	m.OnClientConnack(s, p, res)
 }
 
@@ -98,25 +108,37 @@ func (m *app) OnClientConnack(s xtransport.Socket, req *mqtt.ConnectPacket, ack 
 }
 
 func (m *app) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
-	// connid := uuid.New().String()
+
 	meta := s.Session().MustGet("meta").(*face.MetaInfo)
 	meta.UserName = req.Username
 	meta.ClientIdentifier = req.ClientIdentifier
-	meta.Connected = true
-	m.conns.Store(req.ClientIdentifier, s)
-	fmt.Println(xcolor.Green("connected   "), meta.Stirng())
+
+	if len(meta.ClientIdentifier) == 0 {
+
+	}
+
+	meta.SessionKey = meta.ClientIdentifier
+
+	// meta.Logined = true
+
+	fmt.Println(xcolor.Green("logined   "), meta.Stirng())
+	m.getSessionConnections(meta.SessionKey).Add(meta.ConnID)
+
+	// check clean session on logined
 	if req.CleanSession {
-		m._session.Clear(context.TODO(), req.ClientIdentifier)
+		m._session.Clear(context.TODO(), meta.SessionKey)
 	} else {
-		patterns, err := m._session.ClientPatterns(context.TODO(), req.ClientIdentifier)
+		// 1. check the non cleanSesion's subscribe
+		patterns, err := m._session.ClientPatterns(context.TODO(), meta.SessionKey)
 		if err != nil {
 			s.Close()
 		}
-		// check retain on connected
+		// 2. check retain message
 		retaineds, err := m.checkRetain(meta, patterns)
 		if err != nil {
 			s.Close()
 		}
+		// 3. send the retained message to the client side
 		for i := 0; i < len(retaineds); i++ {
 			if err := s.Send(retaineds[i]); err != nil {
 				s.Close()
@@ -127,10 +149,14 @@ func (m *app) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
 
 func (m *app) OnClientDisConnected(s xtransport.Socket) {
 	meta := s.Session().MustGet("meta").(*face.MetaInfo)
-	meta.Connected = false
-	m.conns.Delete(meta.ClientIdentifier)
-	// log.Println(meta.ClientIdentifier, ">", "disConnected")
-	// fmt.Println(xcolor.Green("connected"), meta.Stirng())
+
+	//1. remove from sessionBook
+	if len(meta.UserName) > 0 {
+		book := m.getSessionConnections(meta.SessionKey)
+		book.Remove(meta.ConnID)
+	}
+	//2. dele from conn lists
+	m.conns.Delete(meta.ConnID)
+
 	fmt.Println(xcolor.Red("disconnected"), meta.Stirng())
-	// disConnected
 }

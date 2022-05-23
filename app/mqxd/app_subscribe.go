@@ -10,7 +10,7 @@ import (
 
 func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 	meta := getMeta(s)
-	if !meta.Connected {
+	if !meta.Logined() {
 		s.Close()
 		return
 	}
@@ -43,7 +43,7 @@ func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 	s.Send(reply)
 
 	// store session
-	if err := m._session.Add(context.Background(), meta.ClientIdentifier, accessedTopics...); err != nil {
+	if err := m._session.Add(context.Background(), meta.SessionKey, accessedTopics...); err != nil {
 		//TODO: system error
 		s.Close()
 		return
@@ -65,7 +65,7 @@ func (m *app) OnClientSubcribe(s xtransport.Socket, p *mqtt.SubscribePacket) {
 
 func (m *app) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket) {
 	meta := getMeta(s)
-	if !meta.Connected {
+	if !meta.Logined() {
 		s.Close()
 		return
 	}
@@ -83,7 +83,7 @@ func (m *app) OnClientUnSubcribe(s xtransport.Socket, p *mqtt.UnsubscribePacket)
 	}
 	res := mqtt.NewControlPacket(mqtt.Unsuback).(*mqtt.UnsubackPacket)
 	res.MessageID = p.MessageID
-	if err := m._session.Remove(context.TODO(), meta.ClientIdentifier, p.Topics...); err != nil {
+	if err := m._session.Remove(context.TODO(), meta.SessionKey, p.Topics...); err != nil {
 		//TODO: system error
 	}
 	s.Send(res)

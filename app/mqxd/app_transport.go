@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xtransport"
@@ -19,13 +20,15 @@ func (m *app) addTransport(protocol string, l xtransport.Listener) {
 	if err := l.Accept(func(sock xtransport.Socket) {
 		port, _ := strconv.ParseUint(strings.Split(sock.Remote()+":0", ":")[1], 10, 16)
 		meta := &face.MetaInfo{
-			Protocol:        protocol,
-			ClientIP:        net.ParseIP(strings.Split(sock.Remote(), ":")[0]),
-			ClientPort:      uint16(port),
-			Connected:       false,
+			Protocol:   protocol,
+			ClientIP:   net.ParseIP(strings.Split(sock.Remote(), ":")[0]),
+			ClientPort: uint16(port),
+			// Logined:         false,
 			ConnectionState: sock.ConnectionState(),
+			ConnID:          uuid.New().String(),
 		}
 		sock.Session().Set("meta", meta)
+		m.conns.Store(meta.ConnID, sock)
 		sock.SetTimeOut(time.Second * 5)
 		//fitst packet must be arrive in next 5 seconds
 

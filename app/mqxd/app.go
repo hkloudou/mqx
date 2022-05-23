@@ -18,14 +18,15 @@ import (
 )
 
 type app struct {
-	_cfg       face.Conf
-	_auth      face.Auth
-	_retain    face.Retain
-	_session   face.Session
-	_acl       face.Acl
-	_bridge    face.Bridge
-	conns      sync.Map
-	topicConns sync.Map
+	_cfg         face.Conf
+	_auth        face.Auth
+	_retain      face.Retain
+	_session     face.Session
+	_acl         face.Acl
+	_bridge      face.Bridge
+	conns        sync.Map
+	sessionConns sync.Map
+	// connUserBook sync.Map
 }
 
 func (m *app) run() {

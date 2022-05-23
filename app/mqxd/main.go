@@ -4,8 +4,8 @@ import "sync"
 
 func main() {
 	_a := &app{
-		conns:      sync.Map{},
-		topicConns: sync.Map{},
+		conns:        sync.Map{},
+		sessionConns: sync.Map{},
 	}
 	_a.init()
 	_a.run()

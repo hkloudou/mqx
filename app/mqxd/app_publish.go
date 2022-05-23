@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/fatih/set"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xtransport"
 	"github.com/hkloudou/xtransport/packets/mqtt"
@@ -11,8 +12,8 @@ import (
 
 func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 	meta := s.Session().MustGet("meta").(*face.MetaInfo)
-	if !meta.Connected {
-		log.Println("not connected")
+	if !meta.Logined() {
+		log.Println("not Logined")
 		s.Close()
 		return
 	}
@@ -53,16 +54,23 @@ func (m *app) publish(p *mqtt.PublishPacket) {
 	}
 	// log.Println("publish", p)
 	// TODO: publish data to client and other node(include zero byte payload packet)
-	clients, err := m._session.Match(context.TODO(), p.TopicName)
+	sessions, err := m._session.Match(context.TODO(), p.TopicName)
 	if err != nil {
 		return
 	}
-	// log.Println("match", clients)
-	for i := 0; i < len(clients); i++ {
+	connIDs := set.New(set.ThreadSafe)
+	for i := 0; i < len(sessions); i++ {
+		connIDs.Add(m.getSessionConnections(sessions[i]).List()...)
+	}
+
+	connIDs2 := connIDs.List()
+
+	log.Println("match Sessions:", sessions, "topic", p.TopicName, connIDs2)
+	for i := 0; i < len(connIDs2); i++ {
 		go func(i2 int) {
-			if _s, found := m.conns.Load(clients[i2]); found && _s != nil {
+			if _s, found := m.conns.Load(connIDs2[i2]); found && _s != nil {
 				if err2 := _s.(xtransport.Socket).Send(p); err2 != nil {
-					// log.Println("err send msg to", clients[i2])
+					log.Println("err send msg to", connIDs2[i2])
 				}
 			}
 		}(i)
