@@ -32,10 +32,26 @@ type natsBridge struct {
 func (m *natsBridge) Motion(cb func(obj *mqtt.PublishPacket)) error {
 	if err := m.motion(m.cfg.PublishKey, cb); err != nil {
 		return err
-	} else if err := m.motionJs(m.cfg.PublishJetstreamKey, cb); err != nil {
+	} else if err := m.motionJs(cb); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (m *natsBridge) Publish(pack *mqtt.PublishPacket) error {
+	err := m.ensureStream(m.cfg.PublishJetstreamKey)
+	if err != nil {
+		return err
+	}
+	_m := nats.NewMsg(m.cfg.PublishJetstreamKey)
+	var buf bytes.Buffer
+	_, err = pack.WriteTo(&buf)
+	if err != nil {
+		return err
+	}
+	_m.Data = buf.Bytes()
+	_, err = m.st.Js().PublishMsg(_m)
+	return err
 }
 
 func (m *natsBridge) motion(key string, cb func(obj *mqtt.PublishPacket)) error {
@@ -56,9 +72,9 @@ func (m *natsBridge) motion(key string, cb func(obj *mqtt.PublishPacket)) error 
 	})
 	return err
 }
-func (m *natsBridge) motionJs(key string, cb func(obj *mqtt.PublishPacket)) error {
-	log.Println("ready motion jetstream in", key)
-	if err := m.st.Config(&nats.StreamConfig{
+
+func (m *natsBridge) ensureStream(key string) error {
+	return m.st.Config(&nats.StreamConfig{
 		Name:         strings.ReplaceAll("mqtt.bridge.publish.jetstream", ".", "_"),
 		Subjects:     []string{key},
 		MaxMsgs:      -1,
@@ -66,11 +82,15 @@ func (m *natsBridge) motionJs(key string, cb func(obj *mqtt.PublishPacket)) erro
 		Storage:      nats.MemoryStorage,
 		NoAck:        true,
 		MaxConsumers: -1,
-	}); err != nil {
+	})
+}
+func (m *natsBridge) motionJs(cb func(obj *mqtt.PublishPacket)) error {
+	log.Println("ready motion jetstream in", m.cfg.PublishJetstreamKey)
+	if err := m.ensureStream(m.cfg.PublishJetstreamKey); err != nil {
 		panic(err)
 	}
 	queue := base64.RawURLEncoding.EncodeToString([]byte(xruntime.HostName() + "-mqxbridge"))
-	_, err := m.st.Js().QueueSubscribe(key, queue, func(msg *nats.Msg) {
+	_, err := m.st.Js().QueueSubscribe(m.cfg.PublishJetstreamKey, queue, func(msg *nats.Msg) {
 		pk, err := mqtt.ReadPacket(bytes.NewReader(msg.Data))
 		log.Println("js data arrve", pk.String())
 		if err != nil {

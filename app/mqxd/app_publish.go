@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"sync"
 
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xtransport"
@@ -27,19 +26,18 @@ func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 		s.Close()
 		return
 	}
-
-	// retainer store
-	// TODO: qos:2
-	m.publish(p)
-	once := sync.Once{}
-	once.Do(func() {
-		if p.Qos == 1 {
-			res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
-			res.MessageID = p.MessageID
+	// publish to distributed nodes
+	err := m._bridge.Publish(p)
+	if p.Qos == 1 {
+		res := mqtt.NewControlPacket(mqtt.Puback).(*mqtt.PubackPacket)
+		res.MessageID = p.MessageID
+		if err != nil {
+			res.Qos = 0x80
+		} else {
 			res.Qos = p.Qos
-			s.Send(res)
 		}
-	})
+		s.Send(res)
+	}
 }
 
 func (m *app) publish(p *mqtt.PublishPacket) {
