@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/set"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xlib/xcolor"
 	"github.com/hkloudou/xtransport"
@@ -15,10 +14,10 @@ import (
 
 const _maxKeepAlive = (18 * time.Hour) + (12 * time.Minute) + (15 * time.Second)
 
-func (m *app) getSessionConnections(sessionKey string) set.Interface {
-	actual, _ := m.sessionConns.LoadOrStore(sessionKey, set.New(set.ThreadSafe))
-	return actual.(set.Interface)
-}
+// func (m *app) getSessionConnection(sessionKey string) string {
+// 	actual, _ := m.sessionConns.LoadOrStore(sessionKey, set.New(set.ThreadSafe))
+// 	return actual.(set.Interface)
+// }
 
 func (m *app) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket) {
 	// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
@@ -122,8 +121,8 @@ func (m *app) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
 	// meta.Logined = true
 
 	fmt.Println(xcolor.Green("logined   "), meta.Stirng())
-	m.getSessionConnections(meta.SessionKey).Add(meta.ConnID)
-
+	// m.getSessionConnections(meta.SessionKey).Add(meta.ConnID)
+	m.sessionConns.Store(meta.SessionKey, meta.ConnID)
 	// check clean session on logined
 	if req.CleanSession {
 		m._session.Clear(context.TODO(), meta.SessionKey)
@@ -150,11 +149,12 @@ func (m *app) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
 func (m *app) OnClientDisConnected(s xtransport.Socket) {
 	meta := s.Session().MustGet("meta").(*face.MetaInfo)
 
-	//1. remove from sessionBook
-	if len(meta.UserName) > 0 {
-		book := m.getSessionConnections(meta.SessionKey)
-		book.Remove(meta.ConnID)
-	}
+	//1. remove from sessionBook or do nothing
+	// if len(meta.SessionKey) > 0 {
+	// m.sessionConns.Delete(meta.SessionKey)
+	// m.sessionConns.
+	// if m.sessionConns.
+	// }
 	//2. dele from conn lists
 	m.conns.Delete(meta.ConnID)
 

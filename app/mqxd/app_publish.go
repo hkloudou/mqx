@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/fatih/set"
 	"github.com/hkloudou/mqx/face"
 	"github.com/hkloudou/xtransport"
 	"github.com/hkloudou/xtransport/packets/mqtt"
@@ -58,19 +57,17 @@ func (m *app) publish(p *mqtt.PublishPacket) {
 	if err != nil {
 		return
 	}
-	connIDs := set.New(set.ThreadSafe)
+	// connIDs := set.New(set.ThreadSafe)
+
 	for i := 0; i < len(sessions); i++ {
-		connIDs.Add(m.getSessionConnections(sessions[i]).List()...)
-	}
-
-	connIDs2 := connIDs.List()
-
-	log.Println("match Sessions:", sessions, "topic", p.TopicName, connIDs2)
-	for i := 0; i < len(connIDs2); i++ {
+		connID, found := m.sessionConns.Load(sessions[i])
+		if !found {
+			continue
+		}
 		go func(i2 int) {
-			if _s, found := m.conns.Load(connIDs2[i2]); found && _s != nil {
+			if _s, found := m.conns.Load(connID); found && _s != nil {
 				if err2 := _s.(xtransport.Socket).Send(p); err2 != nil {
-					log.Println("err send msg to", connIDs2[i2])
+					log.Println("err send msg to", connID)
 				}
 			}
 		}(i)
