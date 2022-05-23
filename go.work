@@ -2,6 +2,7 @@ go 1.18
 
 use (
 	./app/mqxd
+	./app/mqxd-preretain
 	./face
 	./plugins/conf/ini
 	./plugins/auth/memory
