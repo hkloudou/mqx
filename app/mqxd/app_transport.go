@@ -18,12 +18,12 @@ import (
 
 func (m *app) addTransport(protocol string, l xtransport.Listener) {
 	if err := l.Accept(func(sock xtransport.Socket) {
+		log.Println("accept connect from", sock.Remote())
 		port, _ := strconv.ParseUint(strings.Split(sock.Remote()+":0", ":")[1], 10, 16)
 		meta := &face.MetaInfo{
-			Protocol:   protocol,
-			ClientIP:   net.ParseIP(strings.Split(sock.Remote(), ":")[0]),
-			ClientPort: uint16(port),
-			// Logined:         false,
+			Protocol:        protocol,
+			ClientIP:        net.ParseIP(strings.Split(sock.Remote(), ":")[0]),
+			ClientPort:      uint16(port),
 			ConnectionState: sock.ConnectionState(),
 			ConnID:          uuid.New().String(),
 		}
@@ -45,7 +45,7 @@ func (m *app) addTransport(protocol string, l xtransport.Listener) {
 				return i, err
 			})
 			if err != nil {
-				// println(xcolor.Red(err.Error()))
+				println("read err", xcolor.Red(err.Error()))
 				return
 			}
 			if request == nil {

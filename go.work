@@ -13,4 +13,5 @@ use (
 	./plugins/session/redis
 	./plugins/acl/memory
 	./plugins/bridge/nats
+	../xtransport/transports/tcp/
 )

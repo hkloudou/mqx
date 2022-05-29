@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/hkloudou/mqx/face"
@@ -42,6 +43,7 @@ func (m *app) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket) {
 		if k > _maxKeepAlive {
 			k = _maxKeepAlive
 		}
+		log.Println("set TimeOut", k)
 		s.SetTimeOut(k)
 	} else {
 		s.SetTimeOut(_maxKeepAlive)
@@ -123,6 +125,7 @@ func (m *app) OnClientConnected(s xtransport.Socket, req *mqtt.ConnectPacket) {
 	fmt.Println(xcolor.Green("logined   "), meta.Stirng())
 	// m.getSessionConnections(meta.SessionKey).Add(meta.ConnID)
 	m.sessionConns.Store(meta.SessionKey, meta.ConnID)
+	fmt.Println(xcolor.Green(meta.SessionKey), xcolor.Red("=>"), xcolor.Yellow(meta.ConnID))
 	// check clean session on logined
 	if req.CleanSession {
 		m._session.Clear(context.TODO(), meta.SessionKey)
