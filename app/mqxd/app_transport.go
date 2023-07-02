@@ -53,11 +53,11 @@ func (m *app) addTransport(protocol string, l xtransport.Listener) {
 			}
 			switch request := request.(type) {
 			case mqtt.ControlPacket:
-				if request.(mqtt.ControlPacket).Type() <= 0 || request.(mqtt.ControlPacket).Type() >= 14 {
+				if request.Type() <= 0 || request.Type() >= 14 {
 					sock.Close()
 					return
 				}
-				switch request.(mqtt.ControlPacket).Type() {
+				switch request.Type() {
 				case mqtt.Pingreq:
 					sock.Send(mqtt.NewControlPacket(mqtt.Pingresp))
 					break
