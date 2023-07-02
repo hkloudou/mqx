@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/hkloudou/mqx/face"
+	"github.com/hkloudou/xtransport/packets/mqtt"
 )
 
 // type model struct {
@@ -25,7 +26,9 @@ func MustNew(conf face.Conf) face.Bridge {
 }
 
 func New(conf face.Conf) (face.Bridge, error) {
-	obj := &memoryBridge{}
+	obj := &memoryBridge{
+		ch: make(chan *mqtt.PublishPacket),
+	}
 	if conf == nil {
 		return nil, errors.New("invalid conf")
 	}
