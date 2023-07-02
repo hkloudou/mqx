@@ -40,7 +40,7 @@ func (m *app) OnClientPublish(s xtransport.Socket, p *mqtt.PublishPacket) {
 	}
 }
 
-func (m *app) publish(p *mqtt.PublishPacket) {
+func (m *app) onPublish(p *mqtt.PublishPacket) {
 	// retain
 	if p.Retain {
 		if m._retain == nil {

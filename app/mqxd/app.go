@@ -118,7 +118,7 @@ func (m *app) run() {
 	}, &wg, false, 1*time.Second)
 
 	if err := m._bridge.Motion(func(obj *mqtt.PublishPacket) {
-		m.publish(obj)
+		m.onPublish(obj)
 	}); err != nil {
 		log.Println(xcolor.Red(fmt.Sprintf("bridge err:%v", err.Error())))
 		time.Sleep(10 * time.Second)

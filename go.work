@@ -12,6 +12,6 @@ use (
 	./plugins/session/memory
 	./plugins/session/redis
 	./plugins/acl/memory
-	./plugins/bridge/nats
-	../xtransport/transports/tcp/
+	./plugins/bridge/memory
+	./plugins/bridge/nats	
 )
