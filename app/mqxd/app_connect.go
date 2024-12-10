@@ -93,7 +93,7 @@ func (m *app) OnClientConnect(s xtransport.Socket, p *mqtt.ConnectPacket) {
 
 	res.ReturnCode = p.Validate()
 	if res.ReturnCode == mqtt.Accepted {
-		res.ReturnCode = m._auth.Check(context.TODO(), req)
+		res.ReturnCode = mqtt.ConnackReturnCode(m._auth.Check(context.TODO(), req))
 	}
 	m.OnClientConnack(s, p, res)
 }

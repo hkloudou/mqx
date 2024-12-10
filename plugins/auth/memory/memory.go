@@ -67,13 +67,13 @@ func (m *memoryAuth) Update(ctx context.Context, req *face.AuthRequest, options 
 	return nil
 }
 
-func (m *memoryAuth) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) mqtt.ConnackReturnCode {
+func (m *memoryAuth) Check(ctx context.Context, req *face.AuthRequest, options ...face.AuthRequestOption) byte {
 
 	// public account
 	if m.public.Enable && m.public.Username == req.UserName && m.public.Password == req.PassWord {
-		return mqtt.Accepted
+		return byte(mqtt.Accepted)
 	}
-	return mqtt.ErrRefusedServerUnavailable
+	return byte(mqtt.ErrRefusedServerUnavailable)
 }
 
 func (m *memoryAuth) MotionExpired(fc func(userName, clientId string) error) error {
